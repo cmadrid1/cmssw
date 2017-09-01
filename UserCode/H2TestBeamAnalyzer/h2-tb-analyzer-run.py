@@ -93,10 +93,10 @@ process.output = cms.OutputModule(
         fileName = cms.untracked.string('cmsrun_out_h2_tb_run'+runNumber+emapFileShort+'.root')
 )
 
-#
-#process.TFileService = cms.Service("TFileService",
-#       fileName = cms.string("analysis_run"+runNumber+"_"+emapFileShort+".root"),
-#)
+
+process.TFileService = cms.Service("TFileService",
+       fileName = cms.string("analysis_run"+runNumber+"_"+emapFileShort+".root"),
+)
 
 process.load('Configuration.Geometry.GeometryIdeal_cff')
 #process.load('RecoLocalCalo.Configuration.hcalLocalReco_cff')
