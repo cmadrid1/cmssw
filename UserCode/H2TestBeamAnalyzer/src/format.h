@@ -4,6 +4,12 @@
 #define NUMCHS 4000
 #define NUMTS 10
 
+#define HCAL_DET_ngHB 21;
+#define HCAL_DET_ngHE 22;
+#define HCAL_DET_HBHE 26;
+#define HCAL_DET_HF   27;
+
+
 struct TCalibLedInfo
 {
     int numChs;
@@ -46,6 +52,28 @@ struct TQIE11Info
     int TSn[NUMCHS][NUMTS];
     int Cap_id[NUMCHS][NUMTS];
     int tdc[NUMCHS][NUMTS];
+};
+
+struct THCALDigiExtendedInfo
+{
+    int numChs;
+    int detType[NUMCHS];
+    int numTS[NUMCHS];
+    int iphi[NUMCHS];
+    int ieta[NUMCHS];
+    int depth[NUMCHS];
+    float pulse[NUMCHS][NUMTS];
+    float ped[NUMCHS];
+    unsigned char adc[NUMCHS][NUMTS];
+    unsigned char tdc[NUMCHS][NUMTS];
+    bool capid_error[NUMCHS];
+    bool link_error[NUMCHS];
+    bool soi[NUMCHS][NUMTS];
+    int tsnum[NUMCHS][NUMTS];
+    int capid[NUMCHS][NUMTS];
+    float ped_adc[NUMCHS];
+    int tdcint[NUMCHS][NUMTS];
+    bool valid[NUMCHS];
 };
 
 struct H2Triggers

@@ -202,8 +202,8 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     edm::Handle<HBHEDigiCollection> hbheDigiCollection;
     iEvent.getByToken(tok_HBHEDigiCollection_,hbheDigiCollection);
 
-    edm::Handle<QIE11DigiCollection> hqie11dc;
-    iEvent.getByToken(tok_QIE11DigiCollection_, hqie11dc);
+    edm::Handle<QIE11DigiCollection> qie11DigiCollection;
+    iEvent.getByToken(tok_QIE11DigiCollection_, qie11DigiCollection);
 
     edm::Handle<HcalTBTriggerData> trigData;
     iEvent.getByToken(tok_HcalTBTriggerData_, trigData);
@@ -270,11 +270,12 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     std::map<std::string, float> times;
 
-    const QIE11DigiCollection& qie11dc = *hqie11dc;
-    for (int j=0; j < qie11dc.size(); ++j)
-    {
+    for (uint32_t j=0; j<qie11DigiCollection->size(); j++) {
+
+        QIE11DataFrame qie11df = static_cast<QIE11DataFrame>((*qie11DigiCollection)[j]);
+
         // Extract info on detector location
-        DetId detid = qie11dc[j].detid();
+        DetId detid = qie11df.detid();
         HcalDetId hcaldetid = HcalDetId(detid);
         int ieta = hcaldetid.ieta();
         int iphi = hcaldetid.iphi();
@@ -283,7 +284,7 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         float adc[10];//, tdc[10];
         for(int i = 0; i < 10; ++i)
         {
-            adc[i] = converter.linearize(qie11dc[j][i].adc());
+            adc[i] = converter.linearize(qie11df[i].adc());
 	    //tdc[i] = float(qie11dc[j][i].tdc())/2.0;	
         }
 
@@ -291,9 +292,9 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 	for(int i = 4; i <= 8; ++i)
 	{
-	    if(qie11dc[j][i].tdc() != 62 && qie11dc[j][i].tdc() != 63)
+	    if(qie11df[i].tdc() != 62 && qie11df[i].tdc() != 63)
 	    {
-		tdc = (i - 4)*25.0 + float(qie11dc[j][i].tdc())/2.0;
+		tdc = (i - 4)*25.0 + float(qie11df[i].tdc())/2.0;
 		break;
 	    }
 	}

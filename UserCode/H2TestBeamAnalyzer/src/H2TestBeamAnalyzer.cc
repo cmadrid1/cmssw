@@ -121,7 +121,8 @@ using namespace edm;
 	  		230000, 237000, 245000, 253000, 261000, 268000, 276000, 284000,
 	    		291000, 302000, 316000, 329000, 343000, 356000, 370000, 384000
 		};
-class H2TestBeamAnalyzer : public edm::EDAnalyzer 
+
+class H2TestBeamAnalyzer : public edm::EDAnalyzer
 {
 public:
     explicit H2TestBeamAnalyzer(const edm::ParameterSet&);
@@ -134,6 +135,7 @@ private:
     TTree *_treeHBHE;
     TTree *_treeHF;
     TTree *_treeQIE11;
+    TTree *_treeHCAL;
     TTree *_treeTriggers;
     TTree *_treeWC;
     TTree *_treeBC;
@@ -143,9 +145,11 @@ private:
     int _verbosity;
     double gain_;
     TCalibLedInfo _calibInfo;
-    TQIE8Info _hbheInfo;
-    TQIE8Info _hfInfo;
-    TQIE11Info _qie11Info;
+
+    THCALDigiExtendedInfo _hbheInfo;
+    THCALDigiExtendedInfo _hfInfo;
+    THCALDigiExtendedInfo _qie11Info;
+    THCALDigiExtendedInfo _hcalInfo;
 
     H2Triggers _triggers;
     H2BeamCounters _BCData;
@@ -156,27 +160,27 @@ private:
 
     TH1D *x[5];
     TH1D *y[5];
-  TH1D *s1, *s2, *s3, *s4;
+    TH1D *s1, *s2, *s3, *s4;
  
-  int EventNumber;
-  float _slow_data;
-  // TH1F *channelsVSTS[120];
+    int EventNumber;
+    float _slow_data;
 
     edm::EDGetTokenT<HBHEDigiCollection> tok_HBHEDigiCollection_;
     edm::EDGetTokenT<HFDigiCollection> tok_HFDigiCollection_;
     edm::EDGetTokenT<HODigiCollection> tok_HODigiCollection_;
     edm::EDGetTokenT<HcalDataFrameContainer<QIE11DataFrame> > tok_QIE11DigiCollection_;
+    edm::EDGetTokenT<HcalDataFrameContainer<ngHBDataFrame> > tok_ngHBDigiCollection_;
     edm::EDGetTokenT<HcalTBTriggerData> tok_HcalTBTriggerData_;
     edm::EDGetTokenT<HcalTBEventPosition> tok_HcalTBEventPosition_;
     edm::EDGetTokenT<HcalTBBeamCounters> tok_HcalTBBeamCounters_;
     edm::EDGetTokenT<HcalTBParticleId> tok_HcalTBParticleId_;
     edm::EDGetTokenT<HcalTBTiming> tok_HcalTBTiming_;    
 
-  bool _sequencer_flag;
-  edm::EDGetTokenT<FEDRawDataCollection> raw_token;
-  edm::Handle<FEDRawDataCollection> raw_collection;
+    bool _sequencer_flag;
+    edm::EDGetTokenT<FEDRawDataCollection> raw_token;
+    edm::Handle<FEDRawDataCollection> raw_collection;
   
-  hcaltb::HcalTBSlowDataUnpacker sdp;
+    hcaltb::HcalTBSlowDataUnpacker sdp;
 };
 
 //
@@ -192,6 +196,7 @@ H2TestBeamAnalyzer::H2TestBeamAnalyzer(const edm::ParameterSet& iConfig) :
     tok_HFDigiCollection_ = consumes<HFDigiCollection>(edm::InputTag("hcalDigis"));
     tok_HODigiCollection_ = consumes<HODigiCollection>(edm::InputTag("hcalDigis"));
     tok_QIE11DigiCollection_ = consumes<HcalDataFrameContainer<QIE11DataFrame> >(edm::InputTag("hcalDigis"));
+    tok_ngHBDigiCollection_ = consumes<HcalDataFrameContainer<ngHBDataFrame> >(edm::InputTag("hcalDigis"));
     tok_HcalTBTriggerData_ = consumes<HcalTBTriggerData>(edm::InputTag("tbunpack"));
     tok_HcalTBEventPosition_ = consumes<HcalTBEventPosition>(edm::InputTag("tbunpack"));
     tok_HcalTBBeamCounters_ = consumes<HcalTBBeamCounters>(edm::InputTag("tbunpack"));
@@ -207,6 +212,7 @@ H2TestBeamAnalyzer::H2TestBeamAnalyzer(const edm::ParameterSet& iConfig) :
     _file->mkdir("HBHEData");
     _file->mkdir("HFData");
     _file->mkdir("QIE11Data");
+    _file->mkdir("HCALData");
     _file->mkdir("Triggers");
     _file->mkdir("WCData");
     _file->mkdir("Timing");
@@ -228,25 +234,25 @@ H2TestBeamAnalyzer::H2TestBeamAnalyzer(const edm::ParameterSet& iConfig) :
     _file->cd("HBHEData");
     _treeHBHE = new TTree("Events", "Events");
     _treeHBHE->Branch("numChs", &_hbheInfo.numChs, "numChs/I");
-    _treeHBHE->Branch("numTS", &_hbheInfo.numTS, "numTS/I");
+    _treeHBHE->Branch("numTS", _hbheInfo.numTS, "numTS/I");
     _treeHBHE->Branch("iphi", _hbheInfo.iphi, "iphi[numChs]/I");
     _treeHBHE->Branch("ieta", _hbheInfo.ieta, "ieta[numChs]/I");
     _treeHBHE->Branch("depth", _hbheInfo.depth, "depth[numChs]/I");
     _treeHBHE->Branch("pulse", _hbheInfo.pulse, TString::Format("pulse[numChs][%d]/F", NUMTS));
     _treeHBHE->Branch("ped", _hbheInfo.ped, "ped[numChs]/F");
-    _treeHBHE->Branch("pulse_adc", _hbheInfo.pulse_adc, TString::Format("pulse_adc[numChs][%d]/b", NUMTS));
+    _treeHBHE->Branch("pulse_adc", _hbheInfo.adc, TString::Format("pulse_adc[numChs][%d]/b", NUMTS));
     _treeHBHE->Branch("ped_adc", _hbheInfo.ped_adc, "ped_adc[numChs]/F");
     _treeHBHE->Branch("valid", _hbheInfo.valid, "valid[numChs]/O");
 
     _file->cd("HFData");
     _treeHF = new TTree("Events", "Events");
     _treeHF->Branch("numChs", &_hfInfo.numChs, "numChs/I");
-    _treeHF->Branch("numTS", &_hfInfo.numTS, "numTS/I");
+    _treeHF->Branch("numTS", _hfInfo.numTS, "numTS/I");
     _treeHF->Branch("iphi", _hfInfo.iphi, "iphi[numChs]/I");
     _treeHF->Branch("ieta", _hfInfo.ieta, "ieta[numChs]/I");
     _treeHF->Branch("depth", _hfInfo.depth, "depth[numChs]/I");
     _treeHF->Branch("pulse", _hfInfo.pulse, TString::Format("pulse[numChs][%d]/F", NUMTS));
-    _treeHF->Branch("pulse_adc", _hfInfo.pulse_adc, TString::Format("pulse_adc[numChs][%d]/b", NUMTS));
+    _treeHF->Branch("pulse_adc", _hfInfo.adc, TString::Format("pulse_adc[numChs][%d]/b", NUMTS));
     _treeHF->Branch("ped", _hfInfo.ped, "ped[numChs]/F");
     _treeHF->Branch("ped_adc", _hfInfo.ped_adc, "ped_adc[numChs]/F");
     _treeHF->Branch("valid", _hfInfo.valid, "valid[numChs]/O");
@@ -254,23 +260,44 @@ H2TestBeamAnalyzer::H2TestBeamAnalyzer(const edm::ParameterSet& iConfig) :
     _file->cd("QIE11Data");
     _treeQIE11 = new TTree("Events", "Events");
     _treeQIE11->Branch("numChs", &_qie11Info.numChs, "numChs/I");
-    _treeQIE11->Branch("numTS", &_qie11Info.numTS, "numTS/I");
+    _treeQIE11->Branch("numTS", _qie11Info.numTS, "numTS/I");
     _treeQIE11->Branch("iphi", _qie11Info.iphi, "iphi[numChs]/I");
     _treeQIE11->Branch("ieta", _qie11Info.ieta, "ieta[numChs]/I");
     _treeQIE11->Branch("depth", _qie11Info.depth, "depth[numChs]/I");
     _treeQIE11->Branch("pulse", _qie11Info.pulse, TString::Format("pulse[numChs][%d]/F", NUMTS));
     _treeQIE11->Branch("ped", _qie11Info.ped, "ped[numChs]/F");
-    _treeQIE11->Branch("pulse_adc", _qie11Info.pulse_adc, TString::Format("pulse_adc[numChs][%d]/b", NUMTS));
+    _treeQIE11->Branch("pulse_adc", _qie11Info.adc, TString::Format("pulse_adc[numChs][%d]/b", NUMTS));
     _treeQIE11->Branch("ped_adc", _qie11Info.ped_adc, "ped_adc[numChs]/F");
     _treeQIE11->Branch("capid_error", _qie11Info.capid_error, "capid_error[numChs]/O");
     _treeQIE11->Branch("link_error", _qie11Info.link_error, "link_error[numChs]/O");
     _treeQIE11->Branch("soi", _qie11Info.soi, TString::Format("soi[numChs][%d]/O", NUMTS));
-    _treeQIE11->Branch("TSn", _qie11Info.TSn,  TString::Format("TSn[numChs][%d]/I",NUMTS));
-    _treeQIE11->Branch("TDC", _qie11Info.tdc,  TString::Format("TSn[numChs][%d]/I",NUMTS));
-    _treeQIE11->Branch("Cap_id", _qie11Info.Cap_id,  TString::Format("Cap_id[numChs][%d]/I",NUMTS));
+    _treeQIE11->Branch("TSn", _qie11Info.tsnum, TString::Format("TSn[numChs][%d]/I",NUMTS));
+    _treeQIE11->Branch("TDC", _qie11Info.tdcint, TString::Format("TSn[numChs][%d]/I",NUMTS));
+    _treeQIE11->Branch("Cap_id", _qie11Info.capid, TString::Format("Cap_id[numChs][%d]/I",NUMTS));
     _treeQIE11->Branch("ped_trigger", &_triggers.ped, "ped/I");
     _treeQIE11->Branch("led_trigger", &_triggers.led, "led/I");
     _treeQIE11->Branch("slow_data", &_slow_data, "val/F");
+
+    _file->cd("HCALData");
+    _treeHCAL = new TTree("Events", "Events");
+    _treeHCAL->Branch("numChs", &_hcalInfo.numChs, "numChs/I");
+    _treeHCAL->Branch("detType", _hcalInfo.detType, "numTS[numChs]/I");
+    _treeHCAL->Branch("numTS", _hcalInfo.numTS, "numTS[numChs]/I");
+    _treeHCAL->Branch("iphi", _hcalInfo.iphi, "iphi[numChs]/I");
+    _treeHCAL->Branch("ieta", _hcalInfo.ieta, "ieta[numChs]/I");
+    _treeHCAL->Branch("depth", _hcalInfo.depth, "depth[numChs]/I");
+    _treeHCAL->Branch("pulse", _hcalInfo.pulse, TString::Format("pulse[numChs][%d]/F", NUMTS));
+    _treeHCAL->Branch("ped", _hcalInfo.ped, "ped[numChs]/F");
+    _treeHCAL->Branch("adc", _hcalInfo.adc, TString::Format("adc[numChs][%d]/b", NUMTS));
+    _treeHCAL->Branch("tdc", _hcalInfo.tdc, TString::Format("tdc[numChs][%d]/b", NUMTS));
+    _treeHCAL->Branch("capid_error", _hcalInfo.capid_error, "capid_error[numChs]/O");
+    _treeHCAL->Branch("link_error", _hcalInfo.link_error, "link_error[numChs]/O");
+    _treeHCAL->Branch("soi", _hcalInfo.soi, TString::Format("soi[numChs][%d]/O", NUMTS));
+    _treeHCAL->Branch("tsnum", _hcalInfo.tsnum, TString::Format("tsnum[numChs][%d]/I",NUMTS));
+    _treeHCAL->Branch("capid", _hcalInfo.capid, TString::Format("capid[numChs][%d]/I",NUMTS));
+    _treeHCAL->Branch("ped_trigger", &_triggers.ped, "ped/I");
+    _treeHCAL->Branch("led_trigger", &_triggers.led, "led/I");
+    _treeHCAL->Branch("slow_data", &_slow_data, "val/F");
 
     _file->cd("Triggers");
     _treeTriggers = new TTree("Events", "Events");
@@ -320,9 +347,6 @@ H2TestBeamAnalyzer::H2TestBeamAnalyzer(const edm::ParameterSet& iConfig) :
     y[3] = new TH1D("yD", "yD", 10000, -100, 100);
     y[4] = new TH1D("yE", "yE", 10000, -100, 100);
 
-    // char name[100];
-    // for(int channelN=0;channelN<120;channelN++){sprintf(name,"channel%d",channelN); channelsVSTS[channelN] = new TH1F(name, name, 10, 0, 9);}
-
     _file->cd("BeamCounters");
     _treeBC = new TTree("Events", "Events");
     _treeBC->Branch("s1adc", &_BCData.s1adc, "s1adc/D");
@@ -370,6 +394,7 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
     edm::Handle<HFDigiCollection> hfDigiCollection;
     edm::Handle<HODigiCollection> hoDigiCollection;
     edm::Handle<QIE11DigiCollection> qie11DigiCollection;
+    edm::Handle<ngHBDigiCollection> ngHBDigiCollection;
     edm::Handle<HcalTBTriggerData> trigData;
     edm::Handle<HcalTBEventPosition> eventPos;
     edm::Handle<HcalTBBeamCounters> beamCounters;
@@ -380,6 +405,7 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
     iEvent.getByToken(tok_HFDigiCollection_,hfDigiCollection);
     iEvent.getByToken(tok_HODigiCollection_,hoDigiCollection);
     iEvent.getByToken(tok_QIE11DigiCollection_,qie11DigiCollection);
+    iEvent.getByToken(tok_ngHBDigiCollection_,ngHBDigiCollection);
     iEvent.getByToken(tok_HcalTBTriggerData_,trigData);
     iEvent.getByToken(tok_HcalTBEventPosition_,eventPos);
     iEvent.getByToken(tok_HcalTBBeamCounters_,beamCounters);
@@ -461,7 +487,8 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
             << "### HBHE Digis=" << hbheDigiCollection->size() << endl
             << "### HF Digis=" << hfDigiCollection->size() << endl
             << "### HO Digis=" << hoDigiCollection->size() << endl
-            << "### QIE11 Digis=" << qie11DigiCollection->size() << endl;
+            << "### QIE11 (ngHE) Digis=" << qie11DigiCollection->size() << endl
+            << "### ngHB Digis=" << ngHBDigiCollection->size() << endl;
 
         cout << "### Triggers: " << endl
             << "### PED Trigger: " << _triggers.ped << endl
@@ -494,6 +521,13 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
             << "### S3Count: " << _timing.s3Count << endl
             << "### S4Count: " << _timing.s4Count << endl;
     }
+    
+    static const Converter Convertadc2fC(gain_);
+
+    
+    // --------------------------
+    // --   HBHE Information  --
+    // --------------------------
     
     int numChs = 0;
     
@@ -542,10 +576,13 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
         //
         //      Set the Branched arrays
         //
+        _hbheInfo.detType[numChs] = HCAL_DET_HBHE;
         _hbheInfo.iphi[numChs] = iphi;
         _hbheInfo.ieta[numChs] = ieta;
         _hbheInfo.depth[numChs] = depth;
-        _hbheInfo.numTS = nTS;
+        _hbheInfo.numTS[numChs] = nTS;
+        _hbheInfo.capid_error[numChs] = 0; //not worried about capid_error
+        _hbheInfo.link_error[numChs] = 0; //not worried about link_error
         
         float ped_fc = 0;
         float ped_adc = 0;
@@ -557,7 +594,13 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
             const float fC = sample.nominal_fC();
 
             _hbheInfo.pulse[numChs][iTS] = fC;
-            _hbheInfo.pulse_adc[numChs][iTS] = adc;
+            _hbheInfo.adc[numChs][iTS] = adc;
+            _hbheInfo.tsnum[numChs][iTS] = iTS;
+            _hbheInfo.tdc[numChs][iTS] = 254; //there is no TDC information
+            _hbheInfo.tdcint[numChs][iTS] = 254; //there is no TDC information
+            _hbheInfo.soi[numChs][iTS] = 0; //not worried about SOI?
+            _hbheInfo.capid[numChs][iTS] = 254; //not worried about capid?
+            
             if (iTS >= 1 && iTS <= 2)
             {
                 ped_fc += fC;
@@ -582,7 +625,11 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
     }
     _hbheInfo.numChs = numChs;
 
-
+    
+    // --------------------------
+    // --   HF Information  --
+    // --------------------------
+    
     numChs = 0;
     for (HFDigiCollection::const_iterator digi=hfDigiCollection->begin();
                         digi!=hfDigiCollection->end(); ++digi)
@@ -629,10 +676,13 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
         //
         //      Set the Branched arrays
         //
+        _hfInfo.detType[numChs] = HCAL_DET_HF;
         _hfInfo.iphi[numChs] = iphi;
         _hfInfo.ieta[numChs] = ieta;
         _hfInfo.depth[numChs] = depth;
-        _hfInfo.numTS = nTS;
+        _hfInfo.numTS[numChs] = nTS;
+        _hfInfo.capid_error[numChs] = 0; //not worried about capid_error
+        _hfInfo.link_error[numChs] = 0; //not worried about link_error
         
         float ped_fc = 0;
         float ped_adc = 0;
@@ -644,7 +694,13 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
             const float fC = sample.nominal_fC();
             
             _hfInfo.pulse[numChs][iTS] = fC;
-            _hfInfo.pulse_adc[numChs][iTS] = adc;
+            _hfInfo.adc[numChs][iTS] = adc;
+            _hfInfo.tsnum[numChs][iTS] = iTS;
+            _hfInfo.tdc[numChs][iTS] = 254; //there is no TDC information
+            _hfInfo.tdcint[numChs][iTS] = 254; //there is no TDC information
+            _hfInfo.soi[numChs][iTS] = 0; //not worried about SOI?
+            _hfInfo.capid[numChs][iTS] = 254; //not worried about capid?
+
             if (iTS>=1 && iTS<=2)
             {
                 ped_fc += fC;
@@ -674,39 +730,30 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
     // --   QIE11 Information  --
     // --------------------------
     
-    // This does not work:
-    // for (QIE11DigiCollection::const_iterator digi=qie11DigiCollection->begin();
-    //   digi!=qie11DigiCollection->end(); ++digi)
-    //   cout << digi->samples() << endl;
-    // But this apparently does..
-    
-    
     if (_verbosity>0) std::cout << "Trying to access the qie collection" << std::endl;
     
-    static const Converter Convertadc2fC(gain_);
+    if (qie11DigiCollection->size() > NUMCHS) {
+        throw cms::Exception("BufferOverflow") << "QIE11Data buffer overflow (maximum capacity NUMCHS = " << NUMCHS << ")";
+    }
+    
+    if (qie11DigiCollection->samples() > NUMTS) {
+        throw cms::Exception("BufferOverflow") << "QIE11Data time samples buffer overflow (maximum capacity NUMTS = " << NUMTS << ")";
+    }
 
-    const QIE11DigiCollection& qie11dc=*(qie11DigiCollection);
-    
-    if (qie11dc.size() > NUMCHS) {
-      throw cms::Exception("BufferOverflow") << "QIE11Data buffer overflow (maximum capacity NUMCHS = " << NUMCHS << ")";
-    }
-    
-    if (qie11dc.samples() > NUMTS) {
-      throw cms::Exception("BufferOverflow") << "QIE11Data time samples buffer overflow (maximum capacity NUMTS = " << NUMTS << ")";
-    }
-    
-    for (int j=0; j < qie11dc.size(); j++){
+    for (uint32_t j=0; j<qie11DigiCollection->size(); j++) {
+        QIE11DataFrame qie11df = static_cast<QIE11DataFrame>((*qie11DigiCollection)[j]);
+
         
         if (_verbosity>0){
             std::cout << "Printing raw dataframe" << std::endl;
-            std::cout << qie11dc[j] << std::endl;
+            std::cout << qie11df << std::endl;
             
             std::cout << "Printing content of samples() method" << std::endl;
-            std::cout << qie11dc[j].samples() << std::endl;
+            std::cout << qie11df.samples() << std::endl;
         }
         
         // Extract info on detector location
-        DetId detid = qie11dc[j].detid();
+        DetId detid = qie11df.detid();
         HcalDetId hcaldetid = HcalDetId(detid);
         int ieta = hcaldetid.ieta();
         int iphi = hcaldetid.iphi();
@@ -720,7 +767,7 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
         }
         
         // loop over the samples in the digi
-        int nTS = qie11dc[j].samples();
+        int nTS = qie11df.samples();
 
         float ped_adc = 0;
         float ped_fc = 0;
@@ -730,25 +777,31 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
 
         for(int i=0; i<nTS; ++i)
         {
-            unsigned char adc = qie11dc[j][i].adc();
+            unsigned char adc = qie11df[i].adc();
             if (i==0) adc = 5;
-            int tdc = qie11dc[j][i].tdc();
-            int capid = qie11dc[j][i].capid();
-            int soi = qie11dc[j][i].soi();
-	        // channelsVSTS[j]->Fill(i,adc2fC[adc]);
+            const int tdcint = qie11df[i].tdc();
+            const int capid = qie11df[i].capid();
+            const bool soi = qie11df[i].soi();
 
+            const unsigned char tdc = (unsigned char) tdcint;
+            
+            if (tdc != tdcint) {
+                throw cms::Exception("BufferOverflow") << "TDC value outside of 0-255 range";
+            }
+            
             // store pulse information
             const float charge = adc2fC[adc];
             _qie11Info.pulse[j][i] = charge;
-            _qie11Info.pulse_adc[j][i] = adc;
+            _qie11Info.adc[j][i] = adc;
             _qie11Info.soi[j][i] = soi;
-	        _qie11Info.TSn[j][i] = i;
+	        _qie11Info.tsnum[j][i] = i;
 	        _qie11Info.tdc[j][i] = tdc;
-	        _qie11Info.Cap_id[j][i] = capid;
+            _qie11Info.tdcint[j][i] = (int) tdc;
+	        _qie11Info.capid[j][i] = capid;
 
             if (_verbosity>0)
-                std::cout << "Sample " << i << ": ADC=" << adc << " Charge=" << charge << "fC" << " TDC=" << tdc << " Capid=" << capid
-                          << " SOI=" << soi << std::endl;
+                std::cout << "Sample " << i << ": ADC=" << (int) adc << " Charge=" << charge << "fC" << " TDC=" << (int) tdc
+                          << " Capid=" << capid << " SOI=" << soi << std::endl;
 
             if ((adc == 188 && tdc == 60) || (adc == 124 && tdc == 47) || (adc == 188 && tdc == 7) || (adc == 188 && tdc == 11) ||
                 (adc == 124 && tdc == 31) || (adc == 124 && tdc == 49)) {
@@ -757,12 +810,12 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
                mark_tdc = tdc;
 
             if (_verbosity>0)
-                std::cout << "Mark TS "<<EventNumber<<":"<<i<<" bad, code="<<mark_bad<<", adc=" << mark_adc << ", tdc=" << mark_tdc << std::endl;
+                std::cout << "Mark TS " << EventNumber << ":" << i << " bad, code=" << mark_bad << ", adc=" << mark_adc << ", tdc=" << mark_tdc << std::endl;
 
             }
 
             // compute ped from TS 1&2
-            if (i>=1 && i<=2){
+            if (i==1 || i==2){
                 ped_adc += adc;
                 ped_fc += charge;
             }
@@ -777,28 +830,241 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
         // -------------------------------------
         // --    Set the Branched arrays      --
         // -------------------------------------
+        _qie11Info.detType[j] = HCAL_DET_ngHE;
         _qie11Info.iphi[j] = iphi;
         _qie11Info.ieta[j] = ieta;
         _qie11Info.depth[j] = depth;
+        _qie11Info.numTS[j] = nTS;
         _qie11Info.ped[j] = ped_fc;
         _qie11Info.ped_adc[j] = ped_adc;
-        _qie11Info.capid_error[j] = qie11dc[j].capidError();
-        _qie11Info.link_error[j] = qie11dc[j].linkError();
+        _qie11Info.capid_error[j] = qie11df.capidError();
+        _qie11Info.link_error[j] = qie11df.linkError();
+        _qie11Info.valid[j] = _qie11Info.capid_error[j] | _qie11Info.link_error[j];
     }
 
-    _qie11Info.numChs = qie11dc.size();
-    _qie11Info.numTS = qie11dc.samples();
+    _qie11Info.numChs = qie11DigiCollection->size();
 
+    
+    // -------------------------------------------------------------------
+    // --   All HCAL Information (start with ngHB, then append others)  --
+    // -------------------------------------------------------------------
+    
+    if (_hbheInfo.numChs + _hfInfo.numChs + _qie11Info.numChs + ngHBDigiCollection->size() > NUMCHS) {
+        throw cms::Exception("BufferOverflow") << "Full HCAL data buffer overflow (maximum capacity NUMCHS = " << NUMCHS << ")";
+    }
+    
+    if (_verbosity>0) std::cout << "Trying to access the ngHB collection" << std::endl;
+    
+    if (ngHBDigiCollection->samples() > NUMTS) {
+        throw cms::Exception("BufferOverflow") << "ngHBData time samples buffer overflow (maximum capacity NUMTS = " << NUMTS << ")";
+    }
+    
+    for (uint32_t j=0; j<ngHBDigiCollection->size(); j++) {
+        ngHBDataFrame ngHBdf = static_cast<ngHBDataFrame>((*ngHBDigiCollection)[j]);
+        
+        if (_verbosity>0){
+            std::cout << "Printing raw dataframe" << std::endl;
+            std::cout << ngHBdf << std::endl;
+            
+            std::cout << "Printing content of samples() method" << std::endl;
+            std::cout << ngHBdf.samples() << std::endl;
+        }
+        
+        // Extract info on detector location
+        DetId detid = ngHBdf.detid();
+        HcalDetId hcaldetid = HcalDetId(detid);
+        int ieta = hcaldetid.ieta();
+        int iphi = hcaldetid.iphi();
+        int depth = hcaldetid.depth();
+        
+        if (_verbosity>0){
+            std::cout << "Where am I?\n detid: " << detid.rawId() << std::endl;
+            std::cout << " ieta: " << ieta << "\n"
+            << " iphi: " << iphi << "\n"
+            << " depth: " << depth << std::endl;
+        }
+        
+        // loop over the samples in the digi
+        int nTS = ngHBdf.samples();
+        
+        float ped_adc = 0;
+        float ped_fc = 0;
+        
+        mark_bad = 0;
+        mark_adc = 0;
+
+        for(int i=0; i<nTS; ++i)
+        {
+            unsigned char adc = ngHBdf[i].adc();
+            if (i==0) adc = 5;
+            const int tdcint = ngHBdf[i].tdc();
+            const int capid = ngHBdf[i].capid();
+            const bool soi = ngHBdf[i].soi();
+
+            const unsigned char tdc = (unsigned char) tdcint;
+            
+            if (tdc != tdcint) {
+                throw cms::Exception("BufferOverflow") << "TDC value outside of 0-255 range";
+            }
+            
+            // store pulse information
+            const float charge = adc2fC[adc];
+            _hcalInfo.pulse[j][i] = charge;
+            _hcalInfo.adc[j][i] = adc;
+            _hcalInfo.soi[j][i] = soi;
+            _hcalInfo.tsnum[j][i] = i;
+            _hcalInfo.tdc[j][i] = tdc;
+            _hcalInfo.tdcint[j][i] = (int) tdc;
+            _hcalInfo.capid[j][i] = capid;
+            
+            if (_verbosity>0)
+                std::cout << "Sample " << i << ": ADC=" << (int) adc << " Charge=" << charge << "fC" << " TDC=" << (int) tdc << " Capid=" << capid
+                << " SOI=" << soi << std::endl;
+            
+            if (tdc != 3) {
+                mark_bad = 1;
+                mark_adc = adc;
+                mark_tdc = tdc;
+                
+                if (_verbosity==0)
+                    std::cout << "Mark TS1 " << EventNumber << ":" << i << " bad, code=" << mark_bad << ", adc=" << mark_adc << ", tdc=" << mark_tdc << std::endl;
+                
+            }
+           
+            if (adc == 188 || adc == 124 || (adc >= 131 && adc <= 137)) {
+                mark_bad = 1;
+                mark_adc = adc;
+                mark_tdc = tdc;
+                
+                if (_verbosity==0)
+                    std::cout << "Mark TS2 " << EventNumber << ":" << i << " bad, code=" << mark_bad << ", adc=" << mark_adc << ", tdc=" << mark_tdc << std::endl;
+             
+            }
+
+            // compute ped from TS 1&7
+            if (i==1 || i==7){
+                ped_adc += adc;
+                ped_fc += charge;
+            }
+            
+        }
+        ped_adc = ped_adc/2.;
+        ped_fc = ped_fc/2.;
+        
+        if (_verbosity>0)
+            std::cout << "The pedestal for this channel is " << ped_adc << "ADC counts and " << ped_fc << " fC" << std::endl;
+        
+        // -------------------------------------
+        // --    Set the Branched arrays      --
+        // -------------------------------------
+        _hcalInfo.detType[j] = HCAL_DET_ngHB;
+        _hcalInfo.numTS[j] = nTS;
+        _hcalInfo.iphi[j] = iphi;
+        _hcalInfo.ieta[j] = ieta;
+        _hcalInfo.depth[j] = depth;
+        _hcalInfo.ped[j] = ped_fc;
+        _hcalInfo.ped_adc[j] = ped_adc;
+        _hcalInfo.capid_error[j] = 0; //ngHB cap id error doesn't seem to exist
+        _hcalInfo.link_error[j] = ngHBdf.linkError();
+        _hcalInfo.valid[j] = _hcalInfo.link_error[j];
+    }
+
+    _hcalInfo.numChs = ngHBDigiCollection->size();
+
+    
+    
+    uint32_t _totChs;
+
+    // Copy qie11Info into hcalInfo
+    _totChs = _hcalInfo.numChs;
+    for (int j=0; j<_qie11Info.numChs; j++) {
+        _hcalInfo.detType[_totChs+j] = _qie11Info.detType[j];
+        _hcalInfo.numTS[_totChs+j] = _qie11Info.numTS[j];
+        _hcalInfo.iphi[_totChs+j] = _qie11Info.iphi[j];
+        _hcalInfo.ieta[_totChs+j] = _qie11Info.ieta[j];
+        _hcalInfo.depth[_totChs+j] = _qie11Info.depth[j];
+        _hcalInfo.ped[_totChs+j] = _qie11Info.ped[j];
+        _hcalInfo.capid_error[_totChs+j] = _qie11Info.capid_error[j];
+        _hcalInfo.link_error[_totChs+j] = _qie11Info.link_error[j];
+        _hcalInfo.ped_adc[_totChs+j] = _qie11Info.ped_adc[j];
+        _hcalInfo.valid[_totChs+j] = _qie11Info.valid[j];
+        for (int i=0; i<NUMTS; i++) {
+            _hcalInfo.pulse[_totChs+j][i] = _qie11Info.pulse[j][i];
+            _hcalInfo.adc[_totChs+j][i] = _qie11Info.adc[j][i];
+            _hcalInfo.tdc[_totChs+j][i] = _qie11Info.tdc[j][i];
+            _hcalInfo.soi[_totChs+j][i] = _qie11Info.soi[j][i];
+            _hcalInfo.tsnum[_totChs+j][i] = _qie11Info.tsnum[j][i];
+            _hcalInfo.capid[_totChs+j][i] = _qie11Info.capid[j][i];
+            _hcalInfo.tdcint[_totChs+j][i] = _qie11Info.tdcint[j][i];
+        }
+    }
+    _hcalInfo.numChs += _qie11Info.numChs;
+    
+    
+    // Copy hbheInfo into hcalInfo
+    _totChs = _hcalInfo.numChs;
+    for (int j=0; j<_hbheInfo.numChs; j++) {
+        _hcalInfo.detType[_totChs+j] = _hbheInfo.detType[j];
+        _hcalInfo.numTS[_totChs+j] = _hbheInfo.numTS[j];
+        _hcalInfo.iphi[_totChs+j] = _hbheInfo.iphi[j];
+        _hcalInfo.ieta[_totChs+j] = _hbheInfo.ieta[j];
+        _hcalInfo.depth[_totChs+j] = _hbheInfo.depth[j];
+        _hcalInfo.ped[_totChs+j] = _hbheInfo.ped[j];
+        _hcalInfo.capid_error[_totChs+j] = _hbheInfo.capid_error[j];
+        _hcalInfo.link_error[_totChs+j] = _hbheInfo.link_error[j];
+        _hcalInfo.ped_adc[_totChs+j] = _hbheInfo.ped_adc[j];
+        _hcalInfo.valid[_totChs+j] = _hbheInfo.valid[j];
+        for (int i=0; i<NUMTS; i++) {
+            _hcalInfo.pulse[_totChs+j][i] = _hbheInfo.pulse[j][i];
+            _hcalInfo.adc[_totChs+j][i] = _hbheInfo.adc[j][i];
+            _hcalInfo.tdc[_totChs+j][i] = _hbheInfo.tdc[j][i];
+            _hcalInfo.soi[_totChs+j][i] = _hbheInfo.soi[j][i];
+            _hcalInfo.tsnum[_totChs+j][i] = _hbheInfo.tsnum[j][i];
+            _hcalInfo.capid[_totChs+j][i] = _hbheInfo.capid[j][i];
+            _hcalInfo.tdcint[_totChs+j][i] = _hbheInfo.tdcint[j][i];
+        }
+    }
+    _hcalInfo.numChs += _hbheInfo.numChs;
+
+    
+    // Copy hfInfo into hcalInfo
+    _totChs = _hcalInfo.numChs;
+    for (int j=0; j<_hfInfo.numChs; j++) {
+        _hcalInfo.detType[_totChs+j] = _hfInfo.detType[j];
+        _hcalInfo.numTS[_totChs+j] = _hfInfo.numTS[j];
+        _hcalInfo.iphi[_totChs+j] = _hfInfo.iphi[j];
+        _hcalInfo.ieta[_totChs+j] = _hfInfo.ieta[j];
+        _hcalInfo.depth[_totChs+j] = _hfInfo.depth[j];
+        _hcalInfo.ped[_totChs+j] = _hfInfo.ped[j];
+        _hcalInfo.capid_error[_totChs+j] = _hfInfo.capid_error[j];
+        _hcalInfo.link_error[_totChs+j] = _hfInfo.link_error[j];
+        _hcalInfo.ped_adc[_totChs+j] = _hfInfo.ped_adc[j];
+        _hcalInfo.valid[_totChs+j] = _hfInfo.valid[j];
+        for (int i=0; i<NUMTS; i++) {
+            _hcalInfo.pulse[_totChs+j][i] = _hfInfo.pulse[j][i];
+            _hcalInfo.adc[_totChs+j][i] = _hfInfo.adc[j][i];
+            _hcalInfo.tdc[_totChs+j][i] = _hfInfo.tdc[j][i];
+            _hcalInfo.soi[_totChs+j][i] = _hfInfo.soi[j][i];
+            _hcalInfo.tsnum[_totChs+j][i] = _hfInfo.tsnum[j][i];
+            _hcalInfo.capid[_totChs+j][i] = _hfInfo.capid[j][i];
+            _hcalInfo.tdcint[_totChs+j][i] = _hfInfo.tdcint[j][i];
+        }
+    }
+    _hcalInfo.numChs += _hfInfo.numChs;
+    
+
+    
     if (mark_bad == 0) {
       _treeHBHE->Fill();
       _treeHF->Fill();
       _treeQIE11->Fill();
+      _treeHCAL->Fill();
       _treeTriggers->Fill();
       _treeWC->Fill();
       _treeBC->Fill();
       _treeTiming->Fill();
     } else {
-      std::cout << "Mark event "<<EventNumber<<" bad, code="<<mark_bad<<", adc=" << mark_adc << std::endl;	
+      std::cout << "Mark event " << EventNumber << " bad, code=" << mark_bad << ", adc=" << mark_adc << std::endl;
     }
 
     return;
