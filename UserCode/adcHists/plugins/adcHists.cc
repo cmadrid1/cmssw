@@ -183,15 +183,12 @@ void adcHists::fillHist(std::map<std::string, TH1*>& hists, std::string name, fl
 void adcHists::fillHist(std::map<std::string, TH1*>& hists, std::string name, float value, int nbins, float ll, float ul)
 {
     auto hist = hists.find(name);
-    if(hist == hists.end())
-    {
-	hists[name] = fs->make<TH1D>(name.c_str(), name.c_str(), nbins, ll, ul);
-	hists[name]->Sumw2();
-	hists[name]->Fill(value);
-    }
-    else
-    {
-	hist->second->Fill(value);
+    if (hist == hists.end()) {
+        hists[name] = fs->make<TH1D>(name.c_str(), name.c_str(), nbins, ll, ul);
+        hists[name]->Sumw2();
+        hists[name]->Fill(value);
+    } else {
+        hist->second->Fill(value);
     }
 }
 
@@ -237,35 +234,32 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     std::map<std::string, float> towerSum, towerSumCal;
 
-    for(auto& digi : *hbheDigiCollection)
-    {
-	int iphi = digi.id().iphi();
-        int ieta = digi.id().ieta();
-        int depth = digi.id().depth();
-	
-    	float ped = (qie8adc2fC[digi.sample(0).adc()&0xff] + qie8adc2fC[digi.sample(1).adc()&0xff] + qie8adc2fC[digi.sample(2).adc()&0xff])/3.0;
-    	float q = qie8adc2fC[digi.sample(4).adc()&0xff] + qie8adc2fC[digi.sample(5).adc()&0xff] + qie8adc2fC[digi.sample(6).adc()&0xff] - 3*ped;
+    for (auto& digi : *hbheDigiCollection) {
 
-	//float q = digi.sample(5).adc()&0xff;
+        int iphi = digi.id().iphi();
+            int ieta = digi.id().ieta();
+            int depth = digi.id().depth();
+        
+            float ped = (qie8adc2fC[digi.sample(0).adc()&0xff] + qie8adc2fC[digi.sample(1).adc()&0xff] + qie8adc2fC[digi.sample(2).adc()&0xff])/3.0;
+            float q = qie8adc2fC[digi.sample(4).adc()&0xff] + qie8adc2fC[digi.sample(5).adc()&0xff] + qie8adc2fC[digi.sample(6).adc()&0xff] - 3*ped;
 
-	std::stringstream hnum;
-	hnum << ieta << "_" << iphi << "_" << depth;
+        //float q = digi.sample(5).adc()&0xff;
 
-	std::stringstream tnum;
-	tnum << ieta << "_" << iphi;
-	
-	if(trigData->wasBeamTrigger())
-	{    
-	    fillHist(hists, "beam_adc_" + hnum.str(), q, binsQIE8.size() - 1, binsQIE8.data());
+        std::stringstream hnum;
+        hnum << ieta << "_" << iphi << "_" << depth;
 
-	    towerSum[tnum.str()] += q;
-	    towerSumCal[tnum.str()] += q * tbcs.getQIE8Corr(ieta, iphi);
-	    fillHist(hists, "tower_adc_" + tnum.str(), q, binsQIE8.size() - 1, binsQIE8.data());
-	}
-	else
-	{
-	    fillHist(hists, "ped_adc_" + hnum.str(), q, binsQIE8.size() - 1, binsQIE8.data());
-	}
+        std::stringstream tnum;
+        tnum << ieta << "_" << iphi;
+        
+        if(trigData->wasBeamTrigger()) {
+            fillHist(hists, "beam_adc_" + hnum.str(), q, binsQIE8.size() - 1, binsQIE8.data());
+            towerSum[tnum.str()] += q;
+            towerSumCal[tnum.str()] += q * tbcs.getQIE8Corr(ieta, iphi);
+            fillHist(hists, "tower_adc_" + tnum.str(), q, binsQIE8.size() - 1, binsQIE8.data());
+        } else {
+            fillHist(hists, "ped_adc_" + hnum.str(), q, binsQIE8.size() - 1, binsQIE8.data());
+        }
+
     }
 
     std::map<std::string, float> times;
@@ -282,167 +276,161 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         int depth = hcaldetid.depth();
 
         float adc[10];//, tdc[10];
-        for(int i = 0; i < 10; ++i)
-        {
+        for(int i = 0; i < 10; ++i) {
             adc[i] = converter.linearize(qie11df[i].adc());
-	    //tdc[i] = float(qie11dc[j][i].tdc())/2.0;	
+	        //tdc[i] = float(qie11df[i].tdc())/2.0;
         }
 
-	float tdc = -999.0;
+  	    float tdc = -999.0;
 
-	for(int i = 4; i <= 8; ++i)
-	{
-	    if(qie11df[i].tdc() != 62 && qie11df[i].tdc() != 63)
-	    {
-		tdc = (i - 4)*25.0 + float(qie11df[i].tdc())/2.0;
-		break;
+	    for(int i = 4; i <= 8; ++i) {
+	        if(qie11df[i].tdc() != 62 && qie11df[i].tdc() != 63) {
+                tdc = (i - 4)*25.0 + float(qie11df[i].tdc())/2.0;
+                break;
+	        }
 	    }
-	}
 
-	float ped = (adc[0] + adc[1] + adc[2])/3.0;
-	float q = adc[4] + adc[5] + adc[6] - 3*ped;
-	float qNosub = adc[4] + adc[5] + adc[6];
+        float ped = (adc[0] + adc[1] + adc[2])/3.0;
+        float q = adc[4] + adc[5] + adc[6] - 3*ped;
+        float qNosub = adc[4] + adc[5] + adc[6];
 
-	std::stringstream hnum;
-	hnum << ieta << "_" << iphi << "_" << depth;
-	
-	std::stringstream tnum;
-	tnum << ieta << "_" << iphi;
+        std::stringstream hnum;
+        hnum << ieta << "_" << iphi << "_" << depth;
+        
+        std::stringstream tnum;
+        tnum << ieta << "_" << iphi;
 
-	times[hnum.str()] = tdc;
+        times[hnum.str()] = tdc;
 
-	if(trigData->wasBeamTrigger())
-	{    
-	    fillHist(hists, "beam_adc_" + hnum.str(), q, 247, binsQIE11.data());
+        if(trigData->wasBeamTrigger()) {
+            
+            fillHist(hists, "beam_adc_" + hnum.str(), q, 247, binsQIE11.data());
 
-	    towerSum[tnum.str()] += q;
-	    towerSumCal[tnum.str()] += q * tbcs.getQIE11Corr(ieta, iphi, depth);
-	    fillHist(hists, "tower_adc_" + tnum.str(), q, 247, binsQIE11.data());
-	    
-	    fillHist(hists, "beam_tdc_" + hnum.str(), tdc, 250, 0, 125);
-	    
-	    hq->Fill(q);
-	}
-	else
-	{
-	    fillHist(hists, "ped_adc_" + hnum.str(), q, 247, binsQIE11.data());
-	    
-	    fillHist(hists, "ped_tdc_" + hnum.str(), tdc, 250, 0, 125);
-	}
+            towerSum[tnum.str()] += q;
+            towerSumCal[tnum.str()] += q * tbcs.getQIE11Corr(ieta, iphi, depth);
+            fillHist(hists, "tower_adc_" + tnum.str(), q, 247, binsQIE11.data());
+            
+            fillHist(hists, "beam_tdc_" + hnum.str(), tdc, 250, 0, 125);
+            
+            hq->Fill(q);
 
-	fillHist(hists, "adc_nosub_" + hnum.str(), qNosub, 247, binsQIE11.data());
+        } else {
+
+            fillHist(hists, "ped_adc_" + hnum.str(), q, 247, binsQIE11.data());
+            fillHist(hists, "ped_tdc_" + hnum.str(), tdc, 250, 0, 125);
+
+        }
+
+    	fillHist(hists, "adc_nosub_" + hnum.str(), qNosub, 247, binsQIE11.data());
     }
 
-    for(int ieta = 18; ieta < 21; ++ieta)
-    {
-	std::stringstream hnumRef;
-	hnumRef << ieta << "_" << 5 << "_" << 2;
-	float& tref = times[hnumRef.str()];
+    for (int ieta = 18; ieta < 21; ++ieta) {
+
+        std::stringstream hnumRef;
+	    hnumRef << ieta << "_" << 5 << "_" << 2;
+	    float& tref = times[hnumRef.str()];
 	
-	for(int depth = 1; depth <= 6; ++depth)
-	{
-	    std::stringstream hnum;
-	    hnum << ieta << "_" << 5 << "_" << depth;
+        for(int depth = 1; depth <= 6; ++depth) {
+            std::stringstream hnum;
+            hnum << ieta << "_" << 5 << "_" << depth;
 
-	    float& t    = times[hnum.str()];
+            float& t    = times[hnum.str()];
 
-	    float dt = t - tref;
-	    if(t < 0 || tref < 0) dt = -999.9;
+            float dt = t - tref;
+            if(t < 0 || tref < 0) dt = -999.9;
 
-	    fillHist(hists, "timeDiff_" + hnum.str(), dt, 100, -25, 25);
-	}
+            fillHist(hists, "timeDiff_" + hnum.str(), dt, 100, -25, 25);
+        }
     }
 
     double qCluster_all = 0.0;
     double qClusterCal_all = 0.0;
 
-    for(auto& tower : towerSum)
-    {
-	fillHist(hists, "towerSum_adc_" + tower.first, tower.second, 247, binsQIE11.data());
-	qCluster_all += tower.second;
+    for (auto& tower : towerSum) {
+        fillHist(hists, "towerSum_adc_" + tower.first, tower.second, 247, binsQIE11.data());
+        qCluster_all += tower.second;
     }
 
-    for(auto& tower : towerSumCal)
-    {
-	fillHist(hists, "towerSumCal_adc_" + tower.first, tower.second, 247, binsQIE11.data());
-	qClusterCal_all += tower.second;
+    for (auto& tower : towerSumCal) {
+        fillHist(hists, "towerSumCal_adc_" + tower.first, tower.second, 247, binsQIE11.data());
+        qClusterCal_all += tower.second;
     }
 
-    if(towerSum.size())
-    {
-	//Uncalibrated SiPM-only clusters
-	double qCluster_17_5 = towerSum["16_5"] + towerSum["17_5"] + towerSum["18_5"] + towerSum["16_6"] + towerSum["17_6"] + towerSum["18_6"];
-	double qCluster_18_5 = towerSum["17_5"] + towerSum["18_5"] + towerSum["19_5"] + towerSum["17_6"] + towerSum["18_6"] + towerSum["19_6"];
-	double qCluster_19_5 = towerSum["18_5"] + towerSum["19_5"] + towerSum["20_5"] + towerSum["18_6"] + towerSum["19_6"] + towerSum["20_6"];
-	double qCluster_20_5 = towerSum["19_5"] + towerSum["20_5"] + towerSum["21_5"] + towerSum["19_6"] + towerSum["20_6"] + towerSum["21_6"];
-	fillHist(hists, "cluster_adc_17_5", qCluster_17_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "cluster_adc_18_5", qCluster_18_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "cluster_adc_19_5", qCluster_19_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "cluster_adc_20_5", qCluster_20_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "cluster_adc_all",  qCluster_all,  binsQIE11.size() - 1, binsQIE11.data());
+    if(towerSum.size()) {
 
-	//Calibrated SiPM-only clusters
-	double qClusterCal_17_5 = towerSumCal["16_5"] + towerSumCal["17_5"] + towerSumCal["18_5"] + towerSumCal["16_6"] + towerSumCal["17_6"] + towerSumCal["18_6"];
-	double qClusterCal_18_5 = towerSumCal["17_5"] + towerSumCal["18_5"] + towerSumCal["19_5"] + towerSumCal["17_6"] + towerSumCal["18_6"] + towerSumCal["19_6"];
-	double qClusterCal_19_5 = towerSumCal["18_5"] + towerSumCal["19_5"] + towerSumCal["20_5"] + towerSumCal["18_6"] + towerSumCal["19_6"] + towerSumCal["20_6"];
-	double qClusterCal_20_5 = towerSumCal["19_5"] + towerSumCal["20_5"] + towerSumCal["21_5"] + towerSumCal["19_6"] + towerSumCal["20_6"] + towerSumCal["21_6"];
-	fillHist(hists, "clusterCal_adc_17_5", qClusterCal_17_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "clusterCal_adc_18_5", qClusterCal_18_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "clusterCal_adc_19_5", qClusterCal_19_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "clusterCal_adc_20_5", qClusterCal_20_5, binsQIE11.size() - 1, binsQIE11.data());
-	fillHist(hists, "clusterCal_adc_all",  qClusterCal_all,  binsQIE11.size() - 1, binsQIE11.data());
+        //Uncalibrated SiPM-only clusters
+        double qCluster_17_5 = towerSum["16_5"] + towerSum["17_5"] + towerSum["18_5"] + towerSum["16_6"] + towerSum["17_6"] + towerSum["18_6"];
+        double qCluster_18_5 = towerSum["17_5"] + towerSum["18_5"] + towerSum["19_5"] + towerSum["17_6"] + towerSum["18_6"] + towerSum["19_6"];
+        double qCluster_19_5 = towerSum["18_5"] + towerSum["19_5"] + towerSum["20_5"] + towerSum["18_6"] + towerSum["19_6"] + towerSum["20_6"];
+        double qCluster_20_5 = towerSum["19_5"] + towerSum["20_5"] + towerSum["21_5"] + towerSum["19_6"] + towerSum["20_6"] + towerSum["21_6"];
+        fillHist(hists, "cluster_adc_17_5", qCluster_17_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "cluster_adc_18_5", qCluster_18_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "cluster_adc_19_5", qCluster_19_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "cluster_adc_20_5", qCluster_20_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "cluster_adc_all",  qCluster_all,  binsQIE11.size() - 1, binsQIE11.data());
 
-	//Uncalibrated HPD-only clusters - only does the right thing for old runs pre-SiPM installation (use VME readout to be 'safe')
-	double qClusterHPD_17_15 = towerSum["16_15"] + towerSum["17_15"] + towerSum["18_15"] + towerSum["16_16"] + towerSum["17_16"] + towerSum["18_16"] + towerSum["16_14"] + towerSum["17_14"] + towerSum["18_14"];
-	double qClusterHPD_18_15 = towerSum["17_15"] + towerSum["18_15"] + towerSum["19_15"] + towerSum["17_16"] + towerSum["18_16"] + towerSum["19_16"] + towerSum["17_14"] + towerSum["18_14"] + towerSum["19_14"];
-	double qClusterHPD_19_15 = towerSum["18_15"] + towerSum["19_15"] + towerSum["20_15"] + towerSum["18_16"] + towerSum["19_16"] + towerSum["20_16"] + towerSum["18_14"] + towerSum["19_14"] + towerSum["20_14"];
-	double qClusterHPD_20_15 = towerSum["19_15"] + towerSum["20_15"] + towerSum["21_15"] + towerSum["19_16"] + towerSum["20_16"] + towerSum["21_16"] + towerSum["19_14"] + towerSum["20_14"] + towerSum["21_14"];
-	fillHist(hists, "clusterHPD_adc_17_15", qClusterHPD_17_15, binsQIE8.size() - 1, binsQIE8.data());
-	fillHist(hists, "clusterHPD_adc_18_15", qClusterHPD_18_15, binsQIE8.size() - 1, binsQIE8.data());
-	fillHist(hists, "clusterHPD_adc_19_15", qClusterHPD_19_15, binsQIE8.size() - 1, binsQIE8.data());
-	fillHist(hists, "clusterHPD_adc_20_15", qClusterHPD_20_15, binsQIE8.size() - 1, binsQIE8.data());
+        //Calibrated SiPM-only clusters
+        double qClusterCal_17_5 = towerSumCal["16_5"] + towerSumCal["17_5"] + towerSumCal["18_5"] + towerSumCal["16_6"] + towerSumCal["17_6"] + towerSumCal["18_6"];
+        double qClusterCal_18_5 = towerSumCal["17_5"] + towerSumCal["18_5"] + towerSumCal["19_5"] + towerSumCal["17_6"] + towerSumCal["18_6"] + towerSumCal["19_6"];
+        double qClusterCal_19_5 = towerSumCal["18_5"] + towerSumCal["19_5"] + towerSumCal["20_5"] + towerSumCal["18_6"] + towerSumCal["19_6"] + towerSumCal["20_6"];
+        double qClusterCal_20_5 = towerSumCal["19_5"] + towerSumCal["20_5"] + towerSumCal["21_5"] + towerSumCal["19_6"] + towerSumCal["20_6"] + towerSumCal["21_6"];
+        fillHist(hists, "clusterCal_adc_17_5", qClusterCal_17_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "clusterCal_adc_18_5", qClusterCal_18_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "clusterCal_adc_19_5", qClusterCal_19_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "clusterCal_adc_20_5", qClusterCal_20_5, binsQIE11.size() - 1, binsQIE11.data());
+        fillHist(hists, "clusterCal_adc_all",  qClusterCal_all,  binsQIE11.size() - 1, binsQIE11.data());
 
-	//Calibrated HPD-only clusters - only does the right thing for old runs pre-SiPM installation (use VME readout to be 'safe')
-	double qClusterCalHPD_17_15 = towerSumCal["16_15"] + towerSumCal["17_15"] + towerSumCal["18_15"] + towerSumCal["16_16"] + towerSumCal["17_16"] + towerSumCal["18_16"] + towerSumCal["16_14"] + towerSumCal["17_14"] + towerSumCal["18_14"];
-	double qClusterCalHPD_18_15 = towerSumCal["17_15"] + towerSumCal["18_15"] + towerSumCal["19_15"] + towerSumCal["17_16"] + towerSumCal["18_16"] + towerSumCal["19_16"] + towerSumCal["17_14"] + towerSumCal["18_14"] + towerSumCal["19_14"];
-	double qClusterCalHPD_19_15 = towerSumCal["18_15"] + towerSumCal["19_15"] + towerSumCal["20_15"] + towerSumCal["18_16"] + towerSumCal["19_16"] + towerSumCal["20_16"] + towerSumCal["18_14"] + towerSumCal["19_14"] + towerSumCal["20_14"];
-	double qClusterCalHPD_20_15 = towerSumCal["19_15"] + towerSumCal["20_15"] + towerSumCal["21_15"] + towerSumCal["19_16"] + towerSumCal["20_16"] + towerSumCal["21_16"] + towerSumCal["19_14"] + towerSumCal["20_14"] + towerSumCal["21_14"];
-	fillHist(hists, "clusterCalHPD_adc_17_15", qClusterCalHPD_17_15, binsQIE8.size() - 1, binsQIE8.data());
-	fillHist(hists, "clusterCalHPD_adc_18_15", qClusterCalHPD_18_15, binsQIE8.size() - 1, binsQIE8.data());
-	fillHist(hists, "clusterCalHPD_adc_19_15", qClusterCalHPD_19_15, binsQIE8.size() - 1, binsQIE8.data());
-	fillHist(hists, "clusterCalHPD_adc_20_15", qClusterCalHPD_20_15, binsQIE8.size() - 1, binsQIE8.data());
+        //Uncalibrated HPD-only clusters - only does the right thing for old runs pre-SiPM installation (use VME readout to be 'safe')
+        double qClusterHPD_17_15 = towerSum["16_15"] + towerSum["17_15"] + towerSum["18_15"] + towerSum["16_16"] + towerSum["17_16"] + towerSum["18_16"] + towerSum["16_14"] + towerSum["17_14"] + towerSum["18_14"];
+        double qClusterHPD_18_15 = towerSum["17_15"] + towerSum["18_15"] + towerSum["19_15"] + towerSum["17_16"] + towerSum["18_16"] + towerSum["19_16"] + towerSum["17_14"] + towerSum["18_14"] + towerSum["19_14"];
+        double qClusterHPD_19_15 = towerSum["18_15"] + towerSum["19_15"] + towerSum["20_15"] + towerSum["18_16"] + towerSum["19_16"] + towerSum["20_16"] + towerSum["18_14"] + towerSum["19_14"] + towerSum["20_14"];
+        double qClusterHPD_20_15 = towerSum["19_15"] + towerSum["20_15"] + towerSum["21_15"] + towerSum["19_16"] + towerSum["20_16"] + towerSum["21_16"] + towerSum["19_14"] + towerSum["20_14"] + towerSum["21_14"];
+        fillHist(hists, "clusterHPD_adc_17_15", qClusterHPD_17_15, binsQIE8.size() - 1, binsQIE8.data());
+        fillHist(hists, "clusterHPD_adc_18_15", qClusterHPD_18_15, binsQIE8.size() - 1, binsQIE8.data());
+        fillHist(hists, "clusterHPD_adc_19_15", qClusterHPD_19_15, binsQIE8.size() - 1, binsQIE8.data());
+        fillHist(hists, "clusterHPD_adc_20_15", qClusterHPD_20_15, binsQIE8.size() - 1, binsQIE8.data());
 
-	//Uncalibrated SiPM+HPD clusters
-	double qClusterUncalMIP_17_5 = qCluster_17_5 / TBCalibSource::QIE11MIP + (towerSum["16_4"] + towerSum["17_4"] + towerSum["18_4"]) / TBCalibSource::QIE8MIP;
-	double qClusterUncalMIP_18_5 = qCluster_18_5 / TBCalibSource::QIE11MIP + (towerSum["17_4"] + towerSum["18_4"] + towerSum["19_4"]) / TBCalibSource::QIE8MIP;
-	double qClusterUncalMIP_19_5 = qCluster_19_5 / TBCalibSource::QIE11MIP + (towerSum["18_4"] + towerSum["19_4"] + towerSum["20_4"]) / TBCalibSource::QIE8MIP;
-	double qClusterUncalMIP_20_5 = qCluster_20_5 / TBCalibSource::QIE11MIP + (towerSum["19_4"] + towerSum["20_4"] + towerSum["21_4"]) / TBCalibSource::QIE8MIP;
-	fillHist(hists, "cluster_MIP_17_5", qClusterUncalMIP_17_5, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "cluster_MIP_18_5", qClusterUncalMIP_18_5, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "cluster_MIP_19_5", qClusterUncalMIP_19_5, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "cluster_MIP_20_5", qClusterUncalMIP_20_5, binsMIP.size() - 1, binsMIP.data());
+        //Calibrated HPD-only clusters - only does the right thing for old runs pre-SiPM installation (use VME readout to be 'safe')
+        double qClusterCalHPD_17_15 = towerSumCal["16_15"] + towerSumCal["17_15"] + towerSumCal["18_15"] + towerSumCal["16_16"] + towerSumCal["17_16"] + towerSumCal["18_16"] + towerSumCal["16_14"] + towerSumCal["17_14"] + towerSumCal["18_14"];
+        double qClusterCalHPD_18_15 = towerSumCal["17_15"] + towerSumCal["18_15"] + towerSumCal["19_15"] + towerSumCal["17_16"] + towerSumCal["18_16"] + towerSumCal["19_16"] + towerSumCal["17_14"] + towerSumCal["18_14"] + towerSumCal["19_14"];
+        double qClusterCalHPD_19_15 = towerSumCal["18_15"] + towerSumCal["19_15"] + towerSumCal["20_15"] + towerSumCal["18_16"] + towerSumCal["19_16"] + towerSumCal["20_16"] + towerSumCal["18_14"] + towerSumCal["19_14"] + towerSumCal["20_14"];
+        double qClusterCalHPD_20_15 = towerSumCal["19_15"] + towerSumCal["20_15"] + towerSumCal["21_15"] + towerSumCal["19_16"] + towerSumCal["20_16"] + towerSumCal["21_16"] + towerSumCal["19_14"] + towerSumCal["20_14"] + towerSumCal["21_14"];
+        fillHist(hists, "clusterCalHPD_adc_17_15", qClusterCalHPD_17_15, binsQIE8.size() - 1, binsQIE8.data());
+        fillHist(hists, "clusterCalHPD_adc_18_15", qClusterCalHPD_18_15, binsQIE8.size() - 1, binsQIE8.data());
+        fillHist(hists, "clusterCalHPD_adc_19_15", qClusterCalHPD_19_15, binsQIE8.size() - 1, binsQIE8.data());
+        fillHist(hists, "clusterCalHPD_adc_20_15", qClusterCalHPD_20_15, binsQIE8.size() - 1, binsQIE8.data());
 
-	//Calibrated SiPM+HPD clusters
-	double qClusterMIP_17_5 = qClusterCal_17_5 / TBCalibSource::QIE11MIP + (towerSumCal["16_4"] + towerSumCal["17_4"] + towerSumCal["18_4"]) / TBCalibSource::QIE8MIP;
-	double qClusterMIP_18_5 = qClusterCal_18_5 / TBCalibSource::QIE11MIP + (towerSumCal["17_4"] + towerSumCal["18_4"] + towerSumCal["19_4"]) / TBCalibSource::QIE8MIP;
-	double qClusterMIP_19_5 = qClusterCal_19_5 / TBCalibSource::QIE11MIP + (towerSumCal["18_4"] + towerSumCal["19_4"] + towerSumCal["20_4"]) / TBCalibSource::QIE8MIP;
-	double qClusterMIP_20_5 = qClusterCal_20_5 / TBCalibSource::QIE11MIP + (towerSumCal["19_4"] + towerSumCal["20_4"] + towerSumCal["21_4"]) / TBCalibSource::QIE8MIP;
-	fillHist(hists, "clusterCal_MIP_17_5", qClusterMIP_17_5, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "clusterCal_MIP_18_5", qClusterMIP_18_5, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "clusterCal_MIP_19_5", qClusterMIP_19_5, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "clusterCal_MIP_20_5", qClusterMIP_20_5, binsMIP.size() - 1, binsMIP.data());
+        //Uncalibrated SiPM+HPD clusters
+        double qClusterUncalMIP_17_5 = qCluster_17_5 / TBCalibSource::QIE11MIP + (towerSum["16_4"] + towerSum["17_4"] + towerSum["18_4"]) / TBCalibSource::QIE8MIP;
+        double qClusterUncalMIP_18_5 = qCluster_18_5 / TBCalibSource::QIE11MIP + (towerSum["17_4"] + towerSum["18_4"] + towerSum["19_4"]) / TBCalibSource::QIE8MIP;
+        double qClusterUncalMIP_19_5 = qCluster_19_5 / TBCalibSource::QIE11MIP + (towerSum["18_4"] + towerSum["19_4"] + towerSum["20_4"]) / TBCalibSource::QIE8MIP;
+        double qClusterUncalMIP_20_5 = qCluster_20_5 / TBCalibSource::QIE11MIP + (towerSum["19_4"] + towerSum["20_4"] + towerSum["21_4"]) / TBCalibSource::QIE8MIP;
+        fillHist(hists, "cluster_MIP_17_5", qClusterUncalMIP_17_5, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "cluster_MIP_18_5", qClusterUncalMIP_18_5, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "cluster_MIP_19_5", qClusterUncalMIP_19_5, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "cluster_MIP_20_5", qClusterUncalMIP_20_5, binsMIP.size() - 1, binsMIP.data());
 
-	//MIP HPD only plots
-	fillHist(hists, "clusterCalHPD_MIP_17_15", qClusterCalHPD_17_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
-	fillHist(hists, "clusterCalHPD_MIP_18_15", qClusterCalHPD_18_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
-	fillHist(hists, "clusterCalHPD_MIP_19_15", qClusterCalHPD_19_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
-	fillHist(hists, "clusterCalHPD_MIP_20_15", qClusterCalHPD_20_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
+        //Calibrated SiPM+HPD clusters
+        double qClusterMIP_17_5 = qClusterCal_17_5 / TBCalibSource::QIE11MIP + (towerSumCal["16_4"] + towerSumCal["17_4"] + towerSumCal["18_4"]) / TBCalibSource::QIE8MIP;
+        double qClusterMIP_18_5 = qClusterCal_18_5 / TBCalibSource::QIE11MIP + (towerSumCal["17_4"] + towerSumCal["18_4"] + towerSumCal["19_4"]) / TBCalibSource::QIE8MIP;
+        double qClusterMIP_19_5 = qClusterCal_19_5 / TBCalibSource::QIE11MIP + (towerSumCal["18_4"] + towerSumCal["19_4"] + towerSumCal["20_4"]) / TBCalibSource::QIE8MIP;
+        double qClusterMIP_20_5 = qClusterCal_20_5 / TBCalibSource::QIE11MIP + (towerSumCal["19_4"] + towerSumCal["20_4"] + towerSumCal["21_4"]) / TBCalibSource::QIE8MIP;
+        fillHist(hists, "clusterCal_MIP_17_5", qClusterMIP_17_5, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "clusterCal_MIP_18_5", qClusterMIP_18_5, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "clusterCal_MIP_19_5", qClusterMIP_19_5, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "clusterCal_MIP_20_5", qClusterMIP_20_5, binsMIP.size() - 1, binsMIP.data());
 
-	//MIP SiPM only plots
-	fillHist(hists, "clusterCalSiPM_MIP_17_5", qClusterCal_17_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "clusterCalSiPM_MIP_18_5", qClusterCal_18_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "clusterCalSiPM_MIP_19_5", qClusterCal_19_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
-	fillHist(hists, "clusterCalSiPM_MIP_20_5", qClusterCal_20_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
+        //MIP HPD only plots
+        fillHist(hists, "clusterCalHPD_MIP_17_15", qClusterCalHPD_17_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
+        fillHist(hists, "clusterCalHPD_MIP_18_15", qClusterCalHPD_18_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
+        fillHist(hists, "clusterCalHPD_MIP_19_15", qClusterCalHPD_19_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
+        fillHist(hists, "clusterCalHPD_MIP_20_15", qClusterCalHPD_20_15 / TBCalibSource::QIE8MIP, binsQIE8.size() - 1, binsMIP8.data());
+
+        //MIP SiPM only plots
+        fillHist(hists, "clusterCalSiPM_MIP_17_5", qClusterCal_17_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "clusterCalSiPM_MIP_18_5", qClusterCal_18_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "clusterCalSiPM_MIP_19_5", qClusterCal_19_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
+        fillHist(hists, "clusterCalSiPM_MIP_20_5", qClusterCal_20_5 / TBCalibSource::QIE11MIP, binsMIP.size() - 1, binsMIP.data());
     }
 }
 
