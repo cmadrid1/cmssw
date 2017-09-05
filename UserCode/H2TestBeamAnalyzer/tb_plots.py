@@ -463,7 +463,7 @@ for ichan in chanlist:
     hist["e_4TS_noPS", ichan].FindObject("stats").SetX2NDC(0.95)
     hist["e_4TS_noPS", ichan].FindObject("stats").SetY1NDC(0.8)
     hist["e_4TS_noPS", ichan].FindObject("stats").SetY2NDC(0.90)
-    hist["e_4TS_noPS", ichan].Draw()
+    hist["e_4TS_noPS", ichan].Draw("HIST")
     
 
     textsize = 0.03; legx0 = 0.23; legx1 = 0.68; legy0 = 0.82; legy1 = 0.88
@@ -519,7 +519,7 @@ for ichan in chanlist:
     hist["e_4TS_PS", ichan].FindObject("stats").SetX2NDC(0.95)
     hist["e_4TS_PS", ichan].FindObject("stats").SetY1NDC(0.8)
     hist["e_4TS_PS", ichan].FindObject("stats").SetY2NDC(0.90)
-    hist["e_4TS_PS", ichan].Draw()
+    hist["e_4TS_PS", ichan].Draw("HIST")
     
 
     textsize = 0.03; legx0 = 0.23; legx1 = 0.68; legy0 = 0.82; legy1 = 0.88
