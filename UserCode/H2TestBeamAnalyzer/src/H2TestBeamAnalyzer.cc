@@ -272,7 +272,7 @@ H2TestBeamAnalyzer::H2TestBeamAnalyzer(const edm::ParameterSet& iConfig) :
     _treeQIE11->Branch("link_error", _qie11Info.link_error, "link_error[numChs]/O");
     _treeQIE11->Branch("soi", _qie11Info.soi, TString::Format("soi[numChs][%d]/O", NUMTS));
     _treeQIE11->Branch("TSn", _qie11Info.tsnum, TString::Format("TSn[numChs][%d]/I",NUMTS));
-    _treeQIE11->Branch("TDC", _qie11Info.tdcint, TString::Format("TSn[numChs][%d]/I",NUMTS));
+    _treeQIE11->Branch("TDC", _qie11Info.tdc, TString::Format("TSn[numChs][%d]/I",NUMTS));
     _treeQIE11->Branch("Cap_id", _qie11Info.capid, TString::Format("Cap_id[numChs][%d]/I",NUMTS));
     _treeQIE11->Branch("ped_trigger", &_triggers.ped, "ped/I");
     _treeQIE11->Branch("led_trigger", &_triggers.led, "led/I");
@@ -891,7 +891,7 @@ void H2TestBeamAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
         {
             int adc = ngHBdf[i].adc();
             if (i==0) adc = 5;
-            const int tdcint = ngHBdf[i].tdc();
+            const int tdc = ngHBdf[i].tdc();
             const int capid = ngHBdf[i].capid();
             const bool soi = ngHBdf[i].soi();
 
