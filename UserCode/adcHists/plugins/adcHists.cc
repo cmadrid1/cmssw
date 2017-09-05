@@ -365,20 +365,20 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     if(towerSum.size()){
 
       //Uncalibrated iPhi2017
-      double iPhi2017_3 = towerSum["18_3"] + towerSum["19_3"] + towerSum["20_3"];
-      double iPhi2017_4 = towerSum["18_4"] + towerSum["19_4"] + towerSum["20_4"];
-      double iPhi2017_5 = towerSum["18_5"] + towerSum["19_5"] + towerSum["20_5"];
-      double iPhi2017_6 = towerSum["18_6"] + towerSum["19_6"] + towerSum["20_6"];
+      double iPhi2017_3 = (towerSum["18_3"] + towerSum["19_3"] + towerSum["20_3"]) / TBCalibSource::QIE8MIP;
+      double iPhi2017_4 = (towerSum["18_4"] + towerSum["19_4"] + towerSum["20_4"]) / TBCalibSource::QIE8MIP;
+      double iPhi2017_5 = (towerSum["18_5"] + towerSum["19_5"] + towerSum["20_5"]) / TBCalibSource::QIE11MIP;
+      double iPhi2017_6 = (towerSum["18_6"] + towerSum["19_6"] + towerSum["20_6"]) / TBCalibSource::QIE11MIP;
       fillHist(hists, "iPhi2017_adc_3", iPhi2017_3, binsMIP.size() - 1, binsMIP.data());
       fillHist(hists, "iPhi2017_adc_4", iPhi2017_4, binsMIP.size() - 1, binsMIP.data());
       fillHist(hists, "iPhi2017_adc_5", iPhi2017_5, binsMIP.size() - 1, binsMIP.data());
       fillHist(hists, "iPhi2017_adc_6", iPhi2017_6, binsMIP.size() - 1, binsMIP.data());
 
       //Calibrated iPhi2017
-      double iPhi2017Cal_3 = towerSumCal["18_3"] + towerSumCal["19_3"] + towerSumCal["20_3"];
-      double iPhi2017Cal_4 = towerSumCal["18_4"] + towerSumCal["19_4"] + towerSumCal["20_4"];
-      double iPhi2017Cal_5 = towerSumCal["18_5"] + towerSumCal["19_5"] + towerSumCal["20_5"];
-      double iPhi2017Cal_6 = towerSumCal["18_6"] + towerSumCal["19_6"] + towerSumCal["20_6"];
+      double iPhi2017Cal_3 = (towerSumCal["18_3"] + towerSumCal["19_3"] + towerSumCal["20_3"]) / TBCalibSource::QIE8MIP;
+      double iPhi2017Cal_4 = (towerSumCal["18_4"] + towerSumCal["19_4"] + towerSumCal["20_4"]) / TBCalibSource::QIE8MIP;
+      double iPhi2017Cal_5 = (towerSumCal["18_5"] + towerSumCal["19_5"] + towerSumCal["20_5"]) / TBCalibSource::QIE11MIP;
+      double iPhi2017Cal_6 = (towerSumCal["18_6"] + towerSumCal["19_6"] + towerSumCal["20_6"]) / TBCalibSource::QIE11MIP;
       fillHist(hists, "iPhi2017Cal_adc_3", iPhi2017Cal_3, binsMIP.size() - 1, binsMIP.data());
       fillHist(hists, "iPhi2017Cal_adc_4", iPhi2017Cal_4, binsMIP.size() - 1, binsMIP.data());
       fillHist(hists, "iPhi2017Cal_adc_5", iPhi2017Cal_5, binsMIP.size() - 1, binsMIP.data());
