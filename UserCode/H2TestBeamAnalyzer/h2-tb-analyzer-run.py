@@ -70,7 +70,8 @@ process.hcalDigis = cms.EDProducer("HcalRawToDigi",
         lastSample = cms.int32(9)
 )
 
-process.hcalDigis.FEDs = cms.untracked.vint32(700,938)
+# this accommodates both 2015 and 2017 TB data (928 for 2015, 938 for 2017)
+process.hcalDigis.FEDs = cms.untracked.vint32(928,938)
 
 emapFileShort = emapFile.rsplit('.',1)[0].rsplit('/')[-1]
 

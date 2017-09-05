@@ -807,7 +807,7 @@ for ievt in xrange(start, start + nevts_to_run):
             multip = 1.0
             if (not isPhase1[(ieta,iphi,depth)]):
 		  multip = 280.0
-            multip = multip/41.0
+            #multip = multip/41.0
             hist["e_4TS_etaphi", depth].Fill(ieta, iphi, esum[ichan, "4TS_PS"]*multip)
             hist["e_4TS_etadepth", iphi].Fill(ieta, depth, esum[ichan, "4TS_PS"]*multip)
             hist["occupancy_event_etaphi", depth].Fill(ieta,iphi,1./nevts)  #a bit ugly
