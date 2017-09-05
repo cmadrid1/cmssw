@@ -268,7 +268,7 @@ sqie11 = ROOT.qie11_struct()
 for ivname in vname["qie11"]:
     ntp["qie11"].SetBranchAddress(ivname, ROOT.AddressOf(sqie11, ivname))
 
-ROOT.gROOT.ProcessLine("struct hcal_struct {Int_t numChs; Int_t detType[%(dg)d]; Int_t numTS[%(dg)d]; Int_t iphi[%(dg)d]; Int_t ieta[%(dg)d]; Int_t depth[%(dg)d]; Float_t pulse[%(dg)d * %(ts)d]; Float_t ped[%(dg)d]; UChar_t adc[%(dg)d * %(ts)d]; UChar_t tdc[%(dg)d * %(ts)d]; bool capid_error[%(dg)d]; bool link_error[%(dg)d]; bool soi[%(dg)d * %(ts)d]; Int_t tsnum[%(dg)d * %(ts)d]; Int_t capid[%(dg)d * %(ts)d];};" % {"dg": MAXDIGIS, "ts": MAXTS})
+ROOT.gROOT.ProcessLine("struct hcal_struct {Int_t numChs; Int_t detType[%(dg)d]; Int_t numTS[%(dg)d]; Int_t iphi[%(dg)d]; Int_t ieta[%(dg)d]; Int_t depth[%(dg)d]; Float_t pulse[%(dg)d * %(ts)d]; Float_t ped[%(dg)d]; Int_t adc[%(dg)d * %(ts)d]; Int_t tdc[%(dg)d * %(ts)d]; bool capid_error[%(dg)d]; bool link_error[%(dg)d]; bool soi[%(dg)d * %(ts)d]; Int_t tsnum[%(dg)d * %(ts)d]; Int_t capid[%(dg)d * %(ts)d];};" % {"dg": MAXDIGIS, "ts": MAXTS})
 shcal = ROOT.hcal_struct()
 for ivname in vname["hcal"]:
     ntp["hcal"].SetBranchAddress(ivname, ROOT.AddressOf(shcal, ivname))
@@ -711,7 +711,7 @@ for ievt in xrange(start, start + nevts_to_run):
                 energy[ichan,its] = charge[ichan,its]*calib[ichan]
 
             # TDC only available for QIE11 not HBHE
-            if isPhase1:  tdc[ichan,its]   = ord(fread[(ieta,iphi,depth)].tdc[rchan*MAXTS+its])  #[row][col] -> [row*n_cols + col]
+            if isPhase1:  tdc[ichan,its]   = fread[(ieta,iphi,depth)].tdc[rchan*MAXTS+its]  #[row][col] -> [row*n_cols + col]
 
         if verbose:
             print "charge: ", ",".join([str(charge[ichan,its]) for its in xrange(nts)])

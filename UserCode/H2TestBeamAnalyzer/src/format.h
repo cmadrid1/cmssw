@@ -64,15 +64,15 @@ struct THCALDigiExtendedInfo
     int depth[NUMCHS];
     float pulse[NUMCHS][NUMTS];
     float ped[NUMCHS];
-    unsigned char adc[NUMCHS][NUMTS];
-    unsigned char tdc[NUMCHS][NUMTS];
+    int adc[NUMCHS][NUMTS];
+    int tdc[NUMCHS][NUMTS];
     bool capid_error[NUMCHS];
     bool link_error[NUMCHS];
     bool soi[NUMCHS][NUMTS];
     int tsnum[NUMCHS][NUMTS];
     int capid[NUMCHS][NUMTS];
+    unsigned char adc_uchar[NUMCHS][NUMTS];
     float ped_adc[NUMCHS];
-    int tdcint[NUMCHS][NUMTS];
     bool valid[NUMCHS];
 };
 
