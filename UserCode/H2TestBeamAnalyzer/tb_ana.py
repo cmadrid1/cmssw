@@ -10,6 +10,12 @@ import time
 import numpy
 from math import exp, sqrt
 
+HCAL_DET_ngHB = 21
+HCAL_DET_ngHE = 22
+HCAL_DET_HBHE = 26
+HCAL_DET_HF   = 27
+
+
 edges10_list = [1.58,   4.73,   7.88,   11.0,   14.2,   17.3,   20.5,   23.6,
   26.8,   29.9,   33.1,   36.2,   39.4,   42.5,   45.7,   48.8,
   53.6,   60.1,   66.6,   73.0,   79.5,   86.0,   92.5,   98.9,
@@ -224,6 +230,7 @@ ntp = {}
 ntp["hbhe"]  = file.Get("HBHEData/Events")
 ntp["hf"]    = file.Get("HFData/Events")
 ntp["qie11"] = file.Get("QIE11Data/Events")
+ntp["hcal"]  = file.Get("HCALData/Events")
 ntp["wc"]    = file.Get("WCData/Events")
 ntp["time"]  = file.Get("Timing/Events")
 
@@ -232,19 +239,21 @@ ntp["time"]  = file.Get("Timing/Events")
 # Prepare for tree reading
 ############################           
 
+
+# Each "vname" must contain the leaves that are used; order isn't important
 vname = {}
-vname["hbhe"] = ["numChs", "numTS", "iphi", "ieta", "depth", "pulse", "pulse_adc", "ped", "ped_adc"]
+vname["hbhe"] = ["numChs", "numTS", "iphi", "ieta", "depth", "pulse", "ped", "pulse_adc", "ped_adc"]
 vname["hf"] = ["numChs", "numTS", "iphi", "ieta", "depth", "pulse", "pulse_adc", "ped", "ped_adc"]
 vname["qie11"] = ["numChs", "numTS", "iphi", "ieta", "depth", "pulse", "ped", "pulse_adc", "ped_adc", "capid_error", "link_error", "soi", "TDC"]
-#vname["wc"] = ["xA", "yA", "xB", "yB", "xC", "yC", "xD", "yD", "xE", "yE"]
-vname["wc"] = ["xA", "yA", "xB", "yB", "xC", "yC"]
+vname["hcal"] = ["numChs", "detType", "numTS", "iphi", "ieta", "depth", "pulse", "ped", "adc", "tdc", "capid_error", "link_error", "soi"]
+vname["wc"] = ["xA", "yA", "xB", "yB", "xC", "yC"]  #vname["wc"] = ["xA", "yA", "xB", "yB", "xC", "yC", "xD", "yD", "xE", "yE"]
 vname["time"] = ["ttcL1Atime", "triggerTime"]
 
-MAXDIGIS = 300
+MAXDIGIS = 4000
 MAXTS = 10
 # Treat pulse and pulse_adc like 1D array of length MAXDIGIS*MAXTS
 
-ROOT.gROOT.ProcessLine("struct hbhe_struct {Int_t numChs; Int_t numTS; Int_t iphi[%(dg)d]; Int_t ieta[%(dg)d]; Int_t depth[%(dg)d]; Float_t pulse[%(dg)d * %(ts)d]; UChar_t pulse_adc[%(dg)d * %(ts)d]; Float_t ped[%(dg)d]; Float_t ped_adc[%(dg)d];};" % {"dg": MAXDIGIS, "ts": MAXTS})
+ROOT.gROOT.ProcessLine("struct hbhe_struct {Int_t numChs; Int_t numTS; Int_t iphi[%(dg)d]; Int_t ieta[%(dg)d]; Int_t depth[%(dg)d]; Float_t pulse[%(dg)d * %(ts)d]; Float_t ped[%(dg)d]; UChar_t pulse_adc[%(dg)d * %(ts)d]; Float_t ped_adc[%(dg)d];};" % {"dg": MAXDIGIS, "ts": MAXTS})
 shbhe = ROOT.hbhe_struct()
 for ivname in vname["hbhe"]:
     ntp["hbhe"].SetBranchAddress(ivname, ROOT.AddressOf(shbhe, ivname))
@@ -254,10 +263,16 @@ shf = ROOT.hf_struct()
 for ivname in vname["hf"]:
     ntp["hf"].SetBranchAddress(ivname, ROOT.AddressOf(shf, ivname))
 
-ROOT.gROOT.ProcessLine("struct qie11_struct {Int_t numChs; Int_t numTS; Int_t iphi[%(dg)d]; Int_t ieta[%(dg)d]; Int_t depth[%(dg)d]; Float_t pulse[%(dg)d * %(ts)d]; Float_t ped[%(dg)d]; UChar_t pulse_adc[%(dg)d * %(ts)d]; Float_t ped_adc[%(dg)d]; bool capid_error[%(dg)d]; bool link_error[%(dg)d]; bool soi[%(dg)d * %(ts)d]; Int_t TDC[%(dg)d * %(ts)d];};" % {"dg": MAXDIGIS, "ts": MAXTS})
+ROOT.gROOT.ProcessLine("struct qie11_struct {Int_t numChs; Int_t numTS; Int_t iphi[%(dg)d]; Int_t ieta[%(dg)d]; Int_t depth[%(dg)d]; Float_t pulse[%(dg)d * %(ts)d]; Float_t ped[%(dg)d]; UChar_t pulse_adc[%(dg)d * %(ts)d]; Float_t ped_adc[%(dg)d]; bool capid_error[%(dg)d]; bool link_error[%(dg)d]; bool soi[%(dg)d * %(ts)d]; Int_t TSn[%(dg)d * %(ts)d]; Int_t TDC[%(dg)d * %(ts)d];};" % {"dg": MAXDIGIS, "ts": MAXTS})
 sqie11 = ROOT.qie11_struct()
 for ivname in vname["qie11"]:
     ntp["qie11"].SetBranchAddress(ivname, ROOT.AddressOf(sqie11, ivname))
+
+ROOT.gROOT.ProcessLine("struct hcal_struct {Int_t numChs; Int_t detType[%(dg)d]; Int_t numTS[%(dg)d]; Int_t iphi[%(dg)d]; Int_t ieta[%(dg)d]; Int_t depth[%(dg)d]; Float_t pulse[%(dg)d * %(ts)d]; Float_t ped[%(dg)d]; UChar_t adc[%(dg)d * %(ts)d]; UChar_t tdc[%(dg)d * %(ts)d]; bool capid_error[%(dg)d]; bool link_error[%(dg)d]; bool soi[%(dg)d * %(ts)d]; Int_t tsnum[%(dg)d * %(ts)d]; Int_t capid[%(dg)d * %(ts)d];};" % {"dg": MAXDIGIS, "ts": MAXTS})
+shcal = ROOT.hcal_struct()
+for ivname in vname["hcal"]:
+    ntp["hcal"].SetBranchAddress(ivname, ROOT.AddressOf(shcal, ivname))
+
 
 vec = {}
 for ivname in vname["wc"]:
@@ -271,7 +286,7 @@ for ivname in vname["time"]:
     ntp["time"].SetBranchStatus (ivname, 1)
     ntp["time"].SetBranchAddress(ivname, tvar[ivname])
 
-nevts    = ntp["hbhe"].GetEntries()
+nevts    = ntp["hcal"].GetEntries()
 nevts_wc = ntp["wc"].GetEntries()
 if nevts != nevts_wc:
     print "HBHE ntuple = ", nevts
@@ -596,8 +611,7 @@ for ievt in xrange(start, start + nevts_to_run):
     #######################
     # QIE Analysis
     #######################
-    ntp["hbhe"].GetEvent(ievt)
-    ntp["qie11"].GetEvent(ievt)
+    ntp["hcal"].GetEvent(ievt)
 
     # Find the channels 
     ########################
@@ -621,26 +635,15 @@ for ievt in xrange(start, start + nevts_to_run):
     # By matching (ieta,iphi,depth), we create a mapping of fchan[ichan] = rchan
     # fchan contains the found channels    
             
-    isPhase1 = {}
     fchan = {}
     fread = {}
-    for rchan in xrange(shbhe.numChs):
-        test_chan = (shbhe.ieta[rchan], shbhe.iphi[rchan], shbhe.depth[rchan])
+    for rchan in xrange(shcal.numChs):
+        test_chan = (shcal.ieta[rchan], shcal.iphi[rchan], shcal.depth[rchan])
         if test_chan in chansToFind:
             chansToFind.remove(test_chan)
             fchan[chanmap[test_chan]] = rchan
-            fread[test_chan] = shbhe
-            isPhase1[test_chan] = False
-	    #fread[rchan] = shbhe
-    for rchan in xrange(sqie11.numChs):
-        test_chan = (sqie11.ieta[rchan], sqie11.iphi[rchan], sqie11.depth[rchan])
-        if test_chan in chansToFind:
-            chansToFind.remove(test_chan)
-            fchan[chanmap[test_chan]] = rchan
-	    #fread[rchan] = sqie11
-            fread[test_chan] = sqie11
-            isPhase1[test_chan] = True
-    
+            fread[test_chan] = shcal
+
     if verbose:
         print "fchan:", fchan
 
@@ -690,13 +693,15 @@ for ievt in xrange(start, start + nevts_to_run):
         
     for ichan,rchan in fchan.iteritems():
         ieta, iphi, depth = chanmap[ichan]
+        detType = fread[(ieta,iphi,depth)].detType[rchan]
+        isPhase1 = True if detType == HCAL_DET_ngHE else False
 
         if verbose:
             print "processing ichan %s, rchan %s" % (ichan, rchan)
             print "corresponding to ieta %s, iphi %s, depth %s" % (ieta, iphi, depth)
 
         # Pull charges and energies for each time sample, convert to fC when appropriate
-        nts = fread[(ieta,iphi,depth)].numTS
+        nts = fread[(ieta,iphi,depth)].numTS[rchan]
         for its in xrange(nts):
             if adc:
                 charge[ichan,its] = fread[(ieta,iphi,depth)].pulse_adc[rchan*MAXTS+its]  #[row][col] -> [row*n_cols + col]
@@ -706,7 +711,7 @@ for ievt in xrange(start, start + nevts_to_run):
                 energy[ichan,its] = charge[ichan,its]*calib[ichan]
 
             # TDC only available for QIE11 not HBHE
-            if isPhase1[(ieta,iphi,depth)]:  tdc[ichan,its]   = fread[(ieta,iphi,depth)].TDC[rchan*MAXTS+its]  #[row][col] -> [row*n_cols + col]
+            if isPhase1:  tdc[ichan,its]   = ord(fread[(ieta,iphi,depth)].tdc[rchan*MAXTS+its])  #[row][col] -> [row*n_cols + col]
 
         if verbose:
             print "charge: ", ",".join([str(charge[ichan,its]) for its in xrange(nts)])
@@ -718,14 +723,15 @@ for ievt in xrange(start, start + nevts_to_run):
         #    ped_esum += energy[ichan,its]
         #ped_avg = ped_esum/len(ped_ts_list)    
         esum[ichan, "PED"] = fread[(ieta,iphi,depth)].ped[rchan]*calib[ichan]
-        esum[ichan, "PED_ADC"] = fread[(ieta,iphi,depth)].ped_adc[rchan]
+        esum[ichan, "PED_ADC"] = fread[(ieta,iphi,depth)].adc[rchan]
 
         if verbose:
             print "Pedestal (fC) = %s" % (fread[(ieta,iphi,depth)].ped[rchan])
-            print "Pedestal (ADC counts) = %s" % (fread[(ieta,iphi,depth)].ped_adc[rchan])
+            print "Pedestal (ADC counts) = %s" % (fread[(ieta,iphi,depth)].adc[rchan])
 
         # Compute signal and pedestal-subtracted signal
         ts_list = xrange(3,3+sigTS) # [3,4,5,6,7,8,9]   #time samples in which to sum charge for signal
+        if (nts == 8): ts_list = range(2,7)             #temporary use for HB
         sig_esum = 0.
         sig_esum_ps = 0.
         for its in ts_list:  
@@ -762,7 +768,7 @@ for ievt in xrange(start, start + nevts_to_run):
 
         # Fill pulse shape plot
         if fillEplots: 
-            for its in range(10):
+            for its in range(nts):
                 hist["avgpulse", ichan].Fill(its,energy[ichan,its])
 
         # Fill 4TS energy sum plot
@@ -772,11 +778,11 @@ for ievt in xrange(start, start + nevts_to_run):
         if fillEplots: hist["e_4TS_PS", ichan].Fill(esum[ichan, "4TS_PS"])
         
         # Fill time vs. charge plots
-        if fillEplots and isPhase1[(ieta,iphi,depth)]:
+        if fillEplots and isPhase1:
             time  = 0.
             tsoi  = -9
             esum10 = 0.
-            for its in range(10):
+            for its in range(nts):
                 hist["TDC_v_charge" , ichan].Fill(charge[ichan,its], tdc[ichan,its]+its*100.)
                 hist["TDC" , ichan].Fill(tdc[ichan,its]+its*100.)
                 # Find sample of interest as sample before first with TDC=62 (started above threshold)
@@ -788,7 +794,7 @@ for ievt in xrange(start, start + nevts_to_run):
 
             # Find energy weighted time for comparison
             etime_ts = 0.
-            for its in range(10):
+            for its in range(nts):
                 etime_ts += its * charge[ichan,its]/esum10  # E-weighted time in units of TS
             # convert to units of ns since start of TS3
             etime = 25.*(etime_ts-3.)
@@ -805,9 +811,8 @@ for ievt in xrange(start, start + nevts_to_run):
             iphi = chanmap[ichan][1]
             depth = chanmap[ichan][2]
             multip = 1.0
-            if (not isPhase1[(ieta,iphi,depth)]):
+            if (not isPhase1):
 		  multip = 280.0
-            #multip = multip/41.0
             hist["e_4TS_etaphi", depth].Fill(ieta, iphi, esum[ichan, "4TS_PS"]*multip)
             hist["e_4TS_etadepth", iphi].Fill(ieta, depth, esum[ichan, "4TS_PS"]*multip)
             hist["occupancy_event_etaphi", depth].Fill(ieta,iphi,1./nevts)  #a bit ugly
@@ -851,8 +856,6 @@ for ievt in xrange(start, start + nevts_to_run):
     e19_5_2_frac = 0.
     if showerE > 0.:
 	 e19_5_2_frac = e19_5[2]/showerE
-    elif not showerE:
-	print "Strange, showerE is = 0 for this event!"
 
     if not isMuon and e19_5_2_frac > 0.9: isElectron = True
 
