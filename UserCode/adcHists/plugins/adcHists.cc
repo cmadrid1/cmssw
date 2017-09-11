@@ -126,6 +126,7 @@ private:
 
     edm::EDGetTokenT<HBHEDigiCollection> tok_HBHEDigiCollection_;
     edm::EDGetTokenT<QIE11DigiCollection> tok_QIE11DigiCollection_;
+    edm::EDGetTokenT<HcalDataFrameContainer<ngHBDataFrame> > tok_ngHBDigiCollection_;
     edm::EDGetTokenT<HcalTBTriggerData> tok_HcalTBTriggerData_;
     edm::EDGetTokenT<HcalTBTiming> tok_HcalTBTiming_;
 
@@ -143,6 +144,92 @@ private:
     std::vector<double> binsQIE8, binsQIE11, binsMIP, binsMIP8;
 
     TBCalibSource tbcs;
+
+template<typename T, typename C>
+void runHBHEcollection(C& DigiCollection, std::map<std::string, float>& times, edm::Handle<HcalTBTriggerData>& trigData,std::map<std::string, float>& towerSum, std::map<std::string, float>& towerSumCal, const std::vector<int>& pedestal, const std::vector<int>& reco){
+
+    //ADC to nominal charge converter 
+    Converter converter(gain_);
+  
+    for (uint32_t j=0; j<DigiCollection->size(); j++)
+    {
+        T qie11df = static_cast<T>((*DigiCollection)[j]);
+	
+        // Extract info on detector location
+        DetId detid = qie11df.detid();
+        HcalDetId hcaldetid = HcalDetId(detid);
+        int ieta = hcaldetid.ieta();
+        int iphi = hcaldetid.iphi();
+        int depth = hcaldetid.depth();
+	
+        float adc[10];//, tdc[10];
+        for(int i = 0; i < 10; ++i)
+	{    
+	    adc[i] = converter.linearize(qie11df[i].adc());
+	    //tdc[i] = float(qie11df[i].tdc())/2.0;
+        }
+	
+	float tdc = -999.0;
+
+	for(int i = 4; i <= 8; ++i)
+	{
+	    if(qie11df[i].tdc() != 62 && qie11df[i].tdc() != 63)
+	    {
+	        tdc = (i - 4)*25.0 + float(qie11df[i].tdc())/2.0;
+	        break;
+	    }
+	}
+
+	//float ped = (adc[0] + adc[1] + adc[2])/3.0;
+	//float ped = (adc[1] + adc[2])/2.0;
+	//float q = adc[3] + adc[4] + adc[5] + adc[6] + adc[7] + adc[8] + adc[9] - 7*ped;
+	//float qNosub = adc[3] + adc[4] + adc[5] + adc[6] + adc[7] + adc[8] + adc[9];
+
+	float ped    = 0.0;
+	float qNosub = 0.0;
+
+	for(const int& bin:pedestal)
+	{
+	  ped += adc[bin]/(pedestal.size());
+	}
+	for(const int& bin:reco)
+	{
+	    qNosub += adc[bin];
+	}
+	float q = qNosub - reco.size()*ped;
+
+	std::stringstream hnum;
+	hnum << ieta << "_" << iphi << "_" << depth;
+	
+	std::stringstream tnum;
+	tnum << ieta << "_" << iphi;
+
+	times[hnum.str()] = tdc;
+
+	if(trigData->wasBeamTrigger())
+	{    
+	    fillHist(hists, "beam_adc_" + hnum.str(), q, 247, binsQIE11.data());
+	    fillHist(hists, "corrected_beam_adc_" + hnum.str(), q * tbcs.getQIE11Corr(ieta, iphi, depth), 247, binsQIE11.data());
+
+	    towerSum[tnum.str()] += q;
+	    towerSumCal[tnum.str()] += q * tbcs.getQIE11Corr(ieta, iphi, depth);
+	    fillHist(hists, "tower_adc_" + tnum.str(), q, 247, binsQIE11.data());
+	    
+	    fillHist(hists, "beam_tdc_" + hnum.str(), tdc, 250, 0, 125);
+	    
+	    hq->Fill(q);
+	}
+	else
+	{
+	    fillHist(hists, "ped_adc_" + hnum.str(), q, 247, binsQIE11.data());
+	    
+	    fillHist(hists, "ped_tdc_" + hnum.str(), tdc, 250, 0, 125);
+	}
+
+	fillHist(hists, "adc_nosub_" + hnum.str(), qNosub, 247, binsQIE11.data());
+    }
+}
+
 };
 
 adcHists::adcHists(const edm::ParameterSet& iConfig)
@@ -155,7 +242,7 @@ adcHists::adcHists(const edm::ParameterSet& iConfig)
     tok_QIE11DigiCollection_ = consumes<QIE11DigiCollection>(edm::InputTag("hcalDigis"));
     tok_HcalTBTriggerData_ = consumes<HcalTBTriggerData>(edm::InputTag("tbunpack"));
     tok_HcalTBTiming_ = consumes<HcalTBTiming>(edm::InputTag("tbunpack"));
-
+    tok_ngHBDigiCollection_ = consumes<HcalDataFrameContainer<ngHBDataFrame>>(edm::InputTag("hcalDigis"));
     gain_ = iConfig.getUntrackedParameter<double>("gain");
 }
 
@@ -192,6 +279,7 @@ void adcHists::fillHist(std::map<std::string, TH1*>& hists, std::string name, fl
     }
 }
 
+
 void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
     using namespace edm;
@@ -201,6 +289,9 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     edm::Handle<QIE11DigiCollection> qie11DigiCollection;
     iEvent.getByToken(tok_QIE11DigiCollection_, qie11DigiCollection);
+
+    edm::Handle<ngHBDigiCollection> ngHBDigiCollection;
+    iEvent.getByToken(tok_ngHBDigiCollection_,ngHBDigiCollection);
 
     edm::Handle<HcalTBTriggerData> trigData;
     iEvent.getByToken(tok_HcalTBTriggerData_, trigData);
@@ -229,8 +320,6 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     fillHist(hists, "triggerTime", triggerTime, 1000, 0, 20000);
     fillHist(hists, "ttcL1Atime", ttcL1Atime, 1000, 0, 20000);
 
-    //ADC to nominal charge converter 
-    Converter converter(gain_);
 
     std::map<std::string, float> towerSum, towerSumCal;
 
@@ -267,68 +356,8 @@ void adcHists::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
 
     std::map<std::string, float> times;
-
-    for (uint32_t j=0; j<qie11DigiCollection->size(); j++) {
-
-        QIE11DataFrame qie11df = static_cast<QIE11DataFrame>((*qie11DigiCollection)[j]);
-
-        // Extract info on detector location
-        DetId detid = qie11df.detid();
-        HcalDetId hcaldetid = HcalDetId(detid);
-        int ieta = hcaldetid.ieta();
-        int iphi = hcaldetid.iphi();
-        int depth = hcaldetid.depth();
-
-        float adc[10];//, tdc[10];
-        for(int i = 0; i < 10; ++i) {
-            adc[i] = converter.linearize(qie11df[i].adc());
-	        //tdc[i] = float(qie11df[i].tdc())/2.0;
-        }
-
-  	    float tdc = -999.0;
-
-	    for(int i = 4; i <= 8; ++i) {
-	        if(qie11df[i].tdc() != 62 && qie11df[i].tdc() != 63) {
-                tdc = (i - 4)*25.0 + float(qie11df[i].tdc())/2.0;
-                break;
-	        }
-	    }
-
-	//float ped = (adc[0] + adc[1] + adc[2])/3.0;
-	float ped = (adc[1] + adc[2])/2.0;
-	float q = adc[3] + adc[4] + adc[5] + adc[6] + adc[7] + adc[8] + adc[9] - 7*ped;
-	float qNosub = adc[3] + adc[4] + adc[5] + adc[6] + adc[7] + adc[8] + adc[9];
-
-	std::stringstream hnum;
-	hnum << ieta << "_" << iphi << "_" << depth;
-	
-	std::stringstream tnum;
-	tnum << ieta << "_" << iphi;
-
-	times[hnum.str()] = tdc;
-
-	if(trigData->wasBeamTrigger())
-	{    
-	    fillHist(hists, "beam_adc_" + hnum.str(), q, 247, binsQIE11.data());
-	    fillHist(hists, "corrected_beam_adc_" + hnum.str(), q * tbcs.getQIE11Corr(ieta, iphi, depth), 247, binsQIE11.data());
-
-	    towerSum[tnum.str()] += q;
-	    towerSumCal[tnum.str()] += q * tbcs.getQIE11Corr(ieta, iphi, depth);
-	    fillHist(hists, "tower_adc_" + tnum.str(), q, 247, binsQIE11.data());
-	    
-	    fillHist(hists, "beam_tdc_" + hnum.str(), tdc, 250, 0, 125);
-	    
-	    hq->Fill(q);
-	}
-	else
-	{
-	    fillHist(hists, "ped_adc_" + hnum.str(), q, 247, binsQIE11.data());
-	    
-	    fillHist(hists, "ped_tdc_" + hnum.str(), tdc, 250, 0, 125);
-	}
-
-	fillHist(hists, "adc_nosub_" + hnum.str(), qNosub, 247, binsQIE11.data());
-    }
+    runHBHEcollection<QIE11DataFrame>(qie11DigiCollection,times,trigData,towerSum,towerSumCal,{1,2},{3,4,5,6,7,8,9});
+    runHBHEcollection<ngHBDataFrame>(ngHBDigiCollection,times,trigData,towerSum,towerSumCal,{1,7},{2,3,4,5,6});
 
     for (int ieta = 18; ieta < 21; ++ieta) {
 
