@@ -77,18 +77,14 @@ public:
   HORecHit reconstruct(const HODataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
   HcalCalibRecHit reconstruct(const HcalCalibDataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
 
-  ////////////////////
-  //Sorry for this
-  //C.Madrid
-  ///////////////////
-  const HcalTimeSlew* hcaltimeslew_delay_ = nullptr;;  
+  const HcalTimeSlew* hcalTimeSlew_delay_;
 
   void setpuCorrMethod(int method){ 
     puCorrMethod_ = method;
     if( puCorrMethod_ == 2 )
-        psFitOOTpuCorr_ = std::make_unique<PulseShapeFitOOTPileupCorrection>(hcaltimeslew_delay_);
+      psFitOOTpuCorr_ = std::make_unique<PulseShapeFitOOTPileupCorrection>(hcalTimeSlew_delay_);    
   }
-
+  
   void setpuCorrParams(bool   iPedestalConstraint, bool iTimeConstraint,bool iAddPulseJitter,bool iApplyTimeSlew,
 		       double iTS4Min, const std::vector<double> & iTS4Max, double iPulseJitter,
 		       double iTimeMean,double iTimeSig,double iTimeSigSiPM,
@@ -98,8 +94,6 @@ public:
 		       const std::vector<double> & its4Chi2, int iFitTimes);
   void setMeth3Params(bool iApplyTimeSlew, float iPedSubThreshold, int iTimeSlewParsType, std::vector<double> iTimeSlewPars, double irespCorrM3);
 
-  const HcalTimeSlew* hcalTimeSlew_delay_;
-               
 private:
   bool correctForTimeslew_;
   bool correctForPulse_;
