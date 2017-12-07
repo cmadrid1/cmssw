@@ -97,6 +97,8 @@ public:
 		       double iTMin, double iTMax,
 		       const std::vector<double> & its4Chi2, int iFitTimes);
   void setMeth3Params(bool iApplyTimeSlew, float iPedSubThreshold, int iTimeSlewParsType, std::vector<double> iTimeSlewPars, double irespCorrM3);
+
+  const HcalTimeSlew* hcalTimeSlew_delay_;
                
 private:
   bool correctForTimeslew_;
@@ -116,7 +118,6 @@ private:
 
   int puCorrMethod_;
 
-  const HcalTimeSlew* hcalTimeSlew_delay_;
 
   std::unique_ptr<PulseShapeFitOOTPileupCorrection> psFitOOTpuCorr_;
   
