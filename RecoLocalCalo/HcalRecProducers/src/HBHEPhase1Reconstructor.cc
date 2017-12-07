@@ -295,6 +295,8 @@ private:
     void endRun(edm::Run const&, edm::EventSetup const&) override;
     void produce(edm::Event&, const edm::EventSetup&) override;
 
+    const HcalTimeSlew* hcalTimeSlew_delay_;
+  
     // Configuration parameters
     std::string algoConfigClass_;
     bool processQIE8_;
@@ -378,7 +380,7 @@ HBHEPhase1Reconstructor::HBHEPhase1Reconstructor(const edm::ParameterSet& conf)
       setNoiseFlagsQIE11_(conf.getParameter<bool>("setNoiseFlagsQIE11")),
       setPulseShapeFlagsQIE8_(conf.getParameter<bool>("setPulseShapeFlagsQIE8")),
       setPulseShapeFlagsQIE11_(conf.getParameter<bool>("setPulseShapeFlagsQIE11")),
-      reco_(parseHBHEPhase1AlgoDescription(conf.getParameter<edm::ParameterSet>("algorithm"))),
+      reco_(parseHBHEPhase1AlgoDescription(conf.getParameter<edm::ParameterSet>("algorithm"),hcalTimeSlew_delay_)),
       negEFilter_(nullptr)
 {
     // Check that the reco algorithm has been successfully configured
@@ -420,6 +422,8 @@ HBHEPhase1Reconstructor::HBHEPhase1Reconstructor(const edm::ParameterSet& conf)
 
     if (makeRecHits_)
         produces<HBHERecHitCollection>();
+    
+    hcalTimeSlew_delay_ = nullptr;
 }
 
 
@@ -611,6 +615,11 @@ void
 HBHEPhase1Reconstructor::produce(edm::Event& e, const edm::EventSetup& eventSetup)
 {
     using namespace edm;
+
+    edm::ESHandle<HcalTimeSlew> delay;
+    eventSetup.get<HcalTimeSlewRecord>().get("HBHE", delay);
+    hcalTimeSlew_delay_ = &*delay;
+    std::cout<<"HBHEPhase1Reconstructor.cc"<<std::endl;
 
     // Get the Hcal topology
     ESHandle<HcalTopology> htopo;
