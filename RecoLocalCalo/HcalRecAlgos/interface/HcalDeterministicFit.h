@@ -102,29 +102,34 @@ void HcalDeterministicFit::apply(const CaloSamples & cs, const std::vector<int> 
 
   const HcalDetId& cell = digi.id();
 
-  double fpar0, fpar1, fpar2;
-  if(std::abs(cell.ieta())<HcalRegion[0]){
-    fpar0 = fpars[0];
-    fpar1 = fpars[1];
-    fpar2 = fpars[2];
-  }else if(std::abs(cell.ieta())==HcalRegion[0]||std::abs(cell.ieta())==HcalRegion[1]){
-    fpar0 = fpars[3];
-    fpar1 = fpars[4];
-    fpar2 = fpars[5];
-  }else{
-    fpar0 = fpars[6];
-    fpar1 = fpars[7];
-    fpar2 = fpars[8];
-  }
-
-  if (fTimeSlew==0)respCorr=1.0;
-  else if (fTimeSlew==1)respCorr=rCorr[0];
-  else if (fTimeSlew==2)respCorr=rCorr[1];
-  else if (fTimeSlew==3)respCorr=frespCorr;
-
-  float tsShift3=hcalTimeSlew_delay_->delay(inputCharge[3], fTimeSlew, fTimeSlewBias, fpar0, fpar1 ,fpar2);
-  float tsShift4=hcalTimeSlew_delay_->delay(inputCharge[4], fTimeSlew, fTimeSlewBias, fpar0, fpar1 ,fpar2);
-  float tsShift5=hcalTimeSlew_delay_->delay(inputCharge[5], fTimeSlew, fTimeSlewBias, fpar0, fpar1 ,fpar2);
+  //----------------------------------------------------
+  //Fix This
+  //C. Madrid
+  //----------------------------------------------------
+  //double fpar0, fpar1, fpar2;
+  //if(std::abs(cell.ieta())<HcalRegion[0]){
+  //  fpar0 = fpars[0];
+  //  fpar1 = fpars[1];
+  //  fpar2 = fpars[2];
+  //}else if(std::abs(cell.ieta())==HcalRegion[0]||std::abs(cell.ieta())==HcalRegion[1]){
+  //  fpar0 = fpars[3];
+  //  fpar1 = fpars[4];
+  //  fpar2 = fpars[5];
+  //}else{
+  //  fpar0 = fpars[6];
+  //  fpar1 = fpars[7];
+  //  fpar2 = fpars[8];
+  //}
+  //
+  //if (fTimeSlew==0)respCorr=1.0;
+  //else if (fTimeSlew==1)respCorr=rCorr[0];
+  //else if (fTimeSlew==2)respCorr=rCorr[1];
+  //else if (fTimeSlew==3)respCorr=frespCorr;
+  // 
+  std::cout<<"delay header: HcalDeterministicFit.h"<<std::endl;
+  float tsShift3=0;//hcalTimeSlew_delay_->delay(inputCharge[3], fTimeSlew, fTimeSlewBias, fpar0, fpar1 ,fpar2);
+  float tsShift4=0;//hcalTimeSlew_delay_->delay(inputCharge[4], fTimeSlew, fTimeSlewBias, fpar0, fpar1 ,fpar2);
+  float tsShift5=0;//hcalTimeSlew_delay_->delay(inputCharge[5], fTimeSlew, fTimeSlewBias, fpar0, fpar1 ,fpar2);
 
   float i3=0;
   getLandauFrac(-tsShift3,-tsShift3+tsWidth,i3);
